@@ -1,0 +1,11 @@
+services:
+  ignakeeai.mcpserver.supplier.api:
+    image: ${DOCKER_REGISTRY-}ignakeeaimcpserversupplierapi
+    build:
+      context: .
+      dockerfile: src/IgnakeeAI.McpServer.Supplier.Api/Dockerfile
+    ports:
+      - "5100:5100"
+    environment:
+      ASPNETCORE_URLS: http://+:5100
+      

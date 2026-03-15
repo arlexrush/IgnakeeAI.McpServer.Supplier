@@ -1,0 +1,22 @@
+services:
+  ignakeeai.mcpserver.supplier.api:
+    environment:
+      DatabaseProvider: sqlite
+      ConnectionStrings__Catalog: Data Source=/app/data/catalog.db
+    volumes:
+      - supplier_catalog_data:/app/data
+
+  sqlite-ui:
+    image: coleifer/sqlite-web:latest
+    command: /data/catalog.db --host 0.0.0.0 --port 8080
+    ports:
+      - "8081:8080"
+    volumes:
+      - supplier_catalog_data:/data:ro
+    depends_on:
+      - ignakeeai.mcpserver.supplier.api
+    profiles:
+      - sqlite-ui
+
+volumes:
+  supplier_catalog_data:

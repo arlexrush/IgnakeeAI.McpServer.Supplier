@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+	<OutputType>Exe</OutputType>
+	<UseAppHost>true</UseAppHost>
+	<IsTestProject>true</IsTestProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.25" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.24" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.25" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\IgnakeeAI.McpServer.Supplier.Api\IgnakeeAI.McpServer.Supplier.Api.csproj" />
+    <ProjectReference Include="..\..\src\IgnakeeAI.McpServer.Supplier.Infrastructure\IgnakeeAI.McpServer.Supplier.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\IgnakeeAI.McpServer.Supplier.McpTools\IgnakeeAI.McpServer.Supplier.McpTools.csproj" />
+  </ItemGroup>
+
+</Project>

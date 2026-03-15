@@ -1,0 +1,27 @@
+services:
+  ignakeeai.mcpserver.supplier.api:
+    environment:
+      DatabaseProvider: postgresql
+      ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=${POSTGRES_DB:-supplier_catalog};Username=${POSTGRES_USER:-supplier_user};Password=${POSTGRES_PASSWORD:-supplier_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-supplier_catalog}
+      POSTGRES_USER: ${POSTGRES_USER:-supplier_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supplier_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - supplier_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  supplier_postgres_data:

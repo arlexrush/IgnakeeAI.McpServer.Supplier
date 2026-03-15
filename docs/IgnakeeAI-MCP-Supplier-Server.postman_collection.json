@@ -1,0 +1,422 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "IgnakeeAI MCP Supplier Server",
+    "description": "Colección completa para el servidor MCP de proveedor IgnakeeAI.\n\nEndpoint base: {{baseUrl}} (por defecto http://localhost:5100)\n\nGrupos:\n- 🟢 General — health y metadata\n- 🔵 MCP Tools — llamadas al endpoint /mcp\n- 🟠 Admin — sincronización y estadísticas del catálogo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5100",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🟢 General",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica el estado del servicio. Devuelve 200 OK si el servidor está en línea."
+          },
+          "response": []
+        },
+        {
+          "name": "Server Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Devuelve metadata del servidor: nombre, versión, endpoint MCP y tools declaradas."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔵 MCP Tools",
+      "item": [
+        {
+          "name": "getPrice — por descripción",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"GetPrice\",\n    \"arguments\": {\n      \"itemDescription\": \"cemento portland 25kg\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Consulta el precio de un artículo por descripción libre. El campo `itemCode` es opcional."
+          },
+          "response": []
+        },
+        {
+          "name": "getPrice — por código de artículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"GetPrice\",\n    \"arguments\": {\n      \"itemDescription\": \"cemento\",\n      \"itemCode\": \"CEM-001\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Consulta el precio usando código exacto de artículo (SKU). Tiene prioridad sobre la descripción."
+          },
+          "response": []
+        },
+        {
+          "name": "getPrice — artículo no encontrado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"GetPrice\",\n    \"arguments\": {\n      \"itemDescription\": \"producto inexistente xyz\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Caso negativo: producto no encontrado. La respuesta debe incluir `found: false` sin error MCP."
+          },
+          "response": []
+        },
+        {
+          "name": "searchAlternatives — criterio cheaper",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"SearchAlternatives\",\n    \"arguments\": {\n      \"itemDescription\": \"cemento portland\",\n      \"criteria\": \"cheaper\",\n      \"maxResults\": 5,\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Busca sustitutos más baratos para el artículo indicado."
+          },
+          "response": []
+        },
+        {
+          "name": "searchAlternatives — criterio onSale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"SearchAlternatives\",\n    \"arguments\": {\n      \"itemDescription\": \"varilla corrugada\",\n      \"criteria\": \"onSale\",\n      \"maxResults\": 3,\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Busca sustitutos en oferta para el artículo indicado."
+          },
+          "response": []
+        },
+        {
+          "name": "searchAlternatives — criterio optimalPack con cantidad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"SearchAlternatives\",\n    \"arguments\": {\n      \"itemDescription\": \"ladrillo hueco\",\n      \"category\": \"ceramica\",\n      \"criteria\": \"optimalPack\",\n      \"requiredQuantity\": 500,\n      \"maxResults\": 5,\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Busca el pack más conveniente para la cantidad requerida. Útil para optimizar pedidos."
+          },
+          "response": []
+        },
+        {
+          "name": "searchAlternatives — criterio any",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 7,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"SearchAlternatives\",\n    \"arguments\": {\n      \"itemDescription\": \"pintura blanca exterior\",\n      \"criteria\": \"any\",\n      \"maxResults\": 5,\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Devuelve cualquier alternativa disponible sin criterio específico."
+          },
+          "response": []
+        },
+        {
+          "name": "checkAvailability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 8,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"CheckAvailability\",\n    \"arguments\": {\n      \"itemCode\": \"CEM-001\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Consulta stock disponible y plazo de entrega estimado para un artículo por su código."
+          },
+          "response": []
+        },
+        {
+          "name": "checkAvailability — código inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 9,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"CheckAvailability\",\n    \"arguments\": {\n      \"itemCode\": \"NOEXISTE-999\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Caso negativo: código de artículo inexistente. La respuesta debe incluir `found: false`."
+          },
+          "response": []
+        },
+        {
+          "name": "getBusinessHours",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 10,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"GetBusinessHours\",\n    \"arguments\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mcp",
+              "host": ["{{baseUrl}}"],
+              "path": ["mcp"]
+            },
+            "description": "Devuelve horario de atención y datos de contacto del proveedor (sin parámetros)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🟠 Admin",
+      "item": [
+        {
+          "name": "Catalog Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "stats"]
+            },
+            "description": "Devuelve estadísticas del catálogo: total de productos activos, en oferta y distribución por categoría."
+          },
+          "response": []
+        },
+        {
+          "name": "Sync ERP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sync/erp",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sync", "erp"]
+            },
+            "description": "Sincroniza el catálogo con el ERP configurado (Odoo o SAP). Requiere `Erp:Provider` configurado en `appsettings.json`."
+          },
+          "response": []
+        },
+        {
+          "name": "Sync CSV",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Archivo .csv con separador ';' y cabeceras: ItemCode;Description;Category;Keywords;Unit;UnitPrice;..."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sync/csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sync", "csv"]
+            },
+            "description": "Importa catálogo desde un archivo CSV. Separador `;`. Cabeceras: `ItemCode;Description;Category;Keywords;Unit;UnitPrice;...`"
+          },
+          "response": []
+        },
+        {
+          "name": "Sync Excel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Archivo .xlsx con hoja 'Catalogo' (o primera hoja), columnas A–Q."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sync/excel",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sync", "excel"]
+            },
+            "description": "Importa catálogo desde un archivo Excel (.xlsx). Hoja `Catalogo` o primera hoja, columnas A–Q."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
