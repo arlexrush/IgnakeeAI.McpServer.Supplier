@@ -33,7 +33,8 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     productsSynced = count,
                     syncedAt = DateTime.UtcNow
                 });
-            }).WithTags("Admin");
+            }).WithTags("Admin")
+            .RequireAuthorization("AdminPolicy");
 
             /// <summary>
             /// POST /admin/sync/excel, importa un catálogo desde un archivo Excel (.xlsx). 
@@ -63,7 +64,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 {
                     File.Delete(tempPath);
                 }
-            }).DisableAntiforgery().WithTags("Admin");
+            }).DisableAntiforgery()
+            .WithTags("Admin")
+            .RequireAuthorization("AdminPolicy");
 
             /// <summary>
             /// POST /admin/sync/csv, importa un catálogo desde un archivo CSV (.csv). 
@@ -93,7 +96,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 {
                     File.Delete(tempPath);
                 }
-            }).DisableAntiforgery().WithTags("Admin");
+            }).DisableAntiforgery()
+            .WithTags("Admin")
+            .RequireAuthorization("AdminPolicy");
 
             /// <summary>
             /// GET /admin/catalog/stats, devuelve estadísticas del catálogo, incluyendo el número total de productos activos, 
@@ -111,9 +116,8 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     .ToListAsync();
 
                 return Results.Ok(new { totalProducts = total, productsOnSale = onSale, categories });
-            }).WithTags("Admin");
-
-
+            }).WithTags("Admin")
+            .RequireAuthorization("AdminPolicy");
 
         }
 

@@ -22,24 +22,22 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence.Repositories
         public async Task<CatalogProduct?> FindByDescriptionAsync(
             IReadOnlyList<string> searchTerms, CancellationToken ct)
         {
-            var query = _db.Products.Where(p => p.IsActive);
-            foreach (var term in searchTerms)
-            {
-                var t = term;
-                query = query.Where(p =>
-                    EF.Functions.Like(p.Description, $"%{t}%") ||
-                    EF.Functions.Like(p.Keywords, $"%{t}%"));
-            }
+            var allProducts = await _db.Products
+        .Where(p => p.IsActive)
+        .ToListAsync(ct);
 
-            if (_db.Database.IsSqlite())
-            {
-                var products = await query.ToListAsync(ct);
-                return products
-                    .OrderBy(p => p.UnitPrice)
-                    .FirstOrDefault();
-            }
-
-            return await query.OrderBy(p => p.UnitPrice).FirstOrDefaultAsync(ct);
+            // Scoring: cuántos términos coinciden
+            return allProducts
+                .Select(p => new {
+                    Product = p,
+                    Score = searchTerms.Count(t =>
+                        p.Description.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                        (p.Keywords?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false))
+                })
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .ThenBy(x => x.Product.UnitPrice)
+                .FirstOrDefault()?.Product;
         }
 
         public async Task<string?> InferCategoryAsync(

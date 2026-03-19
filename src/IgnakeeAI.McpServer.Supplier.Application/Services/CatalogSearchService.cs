@@ -196,10 +196,13 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
 
         // ── Helpers ──────────────────────────────────────────────────
 
+        private static readonly HashSet<string> _shortTermWhitelist = new(StringComparer.OrdinalIgnoreCase)
+        { "pvc", "m2", "m3", "fe", "hp", "ca", "cu", "pe", "pp" };
+
         private static IReadOnlyList<string> ExtractSearchTerms(string text) =>
             text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(t => t.Length > 2)
-                .Take(5)
+                .Where(t => t.Length > 2 || _shortTermWhitelist.Contains(t))
+                .Take(7)
                 .ToList();
     }
 }

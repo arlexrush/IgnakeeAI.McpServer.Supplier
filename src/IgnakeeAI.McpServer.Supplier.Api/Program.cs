@@ -1,6 +1,8 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Infrastructure;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+// Agregar los siguientes using para los tipos de autenticación personalizados
+using IgnakeeAI.McpServer.Supplier.Api.Security; // Ajusta el namespace según donde estén definidos los tipos
 
 
 namespace IgnakeeAI.McpServer.Supplier.Api
@@ -18,13 +20,20 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             //builder.Services.AddMcpServer()                
             //    .WithToolsFromAssembly(typeof(IgnakeeAI.McpServer.Supplier.McpTools.PricingTools).Assembly)
             //    .WithHttpTransport();
-
             builder.Services.AddMcpServer()
                 .WithToolsFromAssembly(typeof(IgnakeeAI.McpServer.Supplier.McpTools.PricingTools).Assembly)
                 .WithHttpTransport(options =>
                 {
                     options.Stateless = true;
                 });
+
+            builder.Services.AddAuthentication("ApiKey")
+            .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>("ApiKey", opts =>
+                opts.ApiKey = builder.Configuration["Admin:ApiKey"]
+                    ?? throw new InvalidOperationException("Admin:ApiKey no configurada"));
+
+            builder.Services.AddAuthorization(opts =>
+                opts.AddPolicy("AdminPolicy", p => p.RequireAuthenticatedUser()));
 
             builder.Services.AddCors(options =>
             {
@@ -50,15 +59,30 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 var db = scope.ServiceProvider.GetRequiredService<SupplierCatalogDbContext>();
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-                try
+                var migrationStrategy = builder.Configuration.GetValue<string>("Database:MigrationStrategy", "auto"); // auto | manual | skip
+
+                if (migrationStrategy == "auto")
                 {
-                    await db.Database.MigrateAsync();
-                    logger.LogInformation("Migraciones de base de datos aplicadas correctamente.");
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error aplicando migraciones de base de datos al inicio.");
-                    throw;
+                    var maxAttempts = 5;
+                    for (int i = 1; i <= maxAttempts; i++)
+                    {
+                        try
+                        {
+                            await db.Database.MigrateAsync();
+                            logger.LogInformation("Migraciones aplicadas correctamente.");
+                            break;
+                        }
+                        catch (Exception ex) when (i < maxAttempts)
+                        {
+                            logger.LogWarning(ex, "Fallo migración intento {Attempt}/{Max}. Reintentando...", i, maxAttempts);
+                            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogCritical(ex, "Fallo definitivo en migración. El servidor arrancará sin migrar.");
+                            // NO re-throw: permitir que el servidor arranque para healthchecks
+                        }
+                    }
                 }
             }
 

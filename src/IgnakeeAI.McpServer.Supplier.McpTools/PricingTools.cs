@@ -25,9 +25,10 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
         public async Task<string> GetPrice(
             [Description("Full description of the item to quote")] string itemDescription,
             [Description("Item code or SKU for exact lookup (optional)")] string? itemCode = null,
-            [Description("ISO 4217 currency code (e.g. EUR, USD)")] string currency = "EUR")
+            [Description("ISO 4217 currency code (e.g. EUR, USD)")] string currency = "EUR",
+            CancellationToken cancellationToken = default)
         {
-            var result = await _search.GetPriceAsync(itemDescription, itemCode, currency, CancellationToken.None);
+            var result = await _search.GetPriceAsync(itemDescription, itemCode, currency, cancellationToken);
             return JsonSerializer.Serialize(result, JsonOpts);
         }
     }

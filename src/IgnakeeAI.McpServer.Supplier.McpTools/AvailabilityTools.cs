@@ -13,21 +13,22 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
     public class AvailabilityTools
     {
         private readonly CatalogSearchService _search;
-        private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-        private readonly ISupplierConfig SupplierConfig;
+        private static readonly JsonSerializerOptions _JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        private readonly ISupplierConfig _supplierConfig;
 
         public AvailabilityTools(CatalogSearchService search, ISupplierConfig supplierConfig)
         {
             _search = search;
-            SupplierConfig = supplierConfig;
+            _supplierConfig = supplierConfig;
         }
 
         [McpServerTool, Description("Checks stock availability and estimated delivery time for a product.")]
         public async Task<string> CheckAvailability(
-            [Description("Item code or SKU")] string itemCode)
+            [Description("Item code or SKU")] string itemCode,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _search.CheckAvailabilityAsync(itemCode, CancellationToken.None);
-            return JsonSerializer.Serialize(result, JsonOpts);
+            var result = await _search.CheckAvailabilityAsync(itemCode, cancellationToken);
+            return JsonSerializer.Serialize(result, _JsonOpts);
         }
 
         [McpServerTool, Description("Returns business hours and contact information of this supplier.")]
@@ -35,12 +36,12 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
         {
             return JsonSerializer.Serialize(new
             {
-                hours = SupplierConfig.BusinessHours,
-                vendorName = SupplierConfig.VendorName,
-                contactEmail = SupplierConfig.ContactEmail,
-                contactPhone = SupplierConfig.ContactPhone,
-                contactAddress = SupplierConfig.ContactAddress
-            }, JsonOpts);
+                hours = _supplierConfig.BusinessHours,
+                vendorName = _supplierConfig.VendorName,
+                contactEmail = _supplierConfig.ContactEmail,
+                contactPhone = _supplierConfig.ContactPhone,
+                contactAddress = _supplierConfig.ContactAddress
+            }, _JsonOpts);
         }
     }
 }

@@ -3,6 +3,7 @@ using IgnakeeAI.McpServer.Supplier.Domain.Enums;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
+using System.Threading;
 
 namespace IgnakeeAI.McpServer.Supplier.McpTools
 {
@@ -28,13 +29,14 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
             [Description("Criteria: 'cheaper', 'better', 'onSale', 'optimalPack', 'any'")] string criteria = "any",
             [Description("Required quantity to optimize pack sizes")] decimal? requiredQuantity = null,
             [Description("Maximum alternatives to return")] int maxResults = 5,
-            [Description("ISO 4217 currency code")] string currency = "EUR")
+            [Description("ISO 4217 currency code")] string currency = "EUR",
+            CancellationToken cancellationToken = default)
         {
             var parsedCriteria = Enum.TryParse<SubstitutionCriteria>(criteria, true, out var c)
                 ? c : SubstitutionCriteria.Any;
 
             var matches = await _search.SearchAlternativesAsync(
-                itemDescription, category, parsedCriteria, requiredQuantity, maxResults, CancellationToken.None);
+                itemDescription, category, parsedCriteria, requiredQuantity, maxResults, cancellationToken);
 
             var results = matches.Select(m => new
             {
