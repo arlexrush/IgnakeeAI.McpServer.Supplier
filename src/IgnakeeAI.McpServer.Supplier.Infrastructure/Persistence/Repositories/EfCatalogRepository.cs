@@ -43,16 +43,17 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence.Repositories
         public async Task<string?> InferCategoryAsync(
             IReadOnlyList<string> searchTerms, CancellationToken ct)
         {
-            var query = _db.Products.Where(p => p.IsActive);
-            foreach (var term in searchTerms)
-            {
-                var t = term;
-                query = query.Where(p =>
-                    EF.Functions.Like(p.Description, $"%{t}%") ||
-                    EF.Functions.Like(p.Keywords, $"%{t}%"));
-            }
-            var product = await query.FirstOrDefaultAsync(ct);
-            return product?.Category;
+            var allProducts = await _db.Products.Where(p => p.IsActive).ToListAsync(ct);
+            return allProducts
+                .Select(p => new {
+                    p.Category,
+                    Score = searchTerms.Count(t =>
+                        p.Description.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                        (p.Keywords?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false))
+                })
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault()?.Category;
         }
 
         public async Task<IReadOnlyList<CatalogProduct>> FindCheaperInCategoryAsync(
