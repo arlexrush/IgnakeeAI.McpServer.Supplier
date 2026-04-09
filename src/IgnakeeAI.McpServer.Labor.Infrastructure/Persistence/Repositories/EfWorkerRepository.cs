@@ -1,6 +1,7 @@
 using IgnakeeAI.McpServer.Labor.Application.Interfaces;
 using IgnakeeAI.McpServer.Labor.Domain.Entities;
 using IgnakeeAI.McpServer.Labor.Domain.Enums;
+using IgnakeeAI.McpServer.Labor.Domain.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace IgnakeeAI.McpServer.Labor.Infrastructure.Persistence.Repositories
@@ -65,7 +66,7 @@ namespace IgnakeeAI.McpServer.Labor.Infrastructure.Persistence.Repositories
                 .Select(w => new
                 {
                     Worker = w,
-                    DistKm = CalculateDistanceKm(latitude, longitude, w.Latitude!.Value, w.Longitude!.Value)
+                    DistKm = GeoUtils.CalculateDistanceKm(latitude, longitude, w.Latitude!.Value, w.Longitude!.Value)
                 })
                 .Where(x => x.DistKm <= radiusKm)
                 .OrderBy(x => x.DistKm)
@@ -118,17 +119,6 @@ namespace IgnakeeAI.McpServer.Labor.Infrastructure.Persistence.Repositories
                 .FirstOrDefault()?.Specialty;
         }
 
-        private static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
-        {
-            const double R = 6371.0;
-            var dLat = ToRad(lat2 - lat1);
-            var dLon = ToRad(lon2 - lon1);
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
-                  + Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2))
-                  * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-            return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        }
-
-        private static double ToRad(double deg) => deg * Math.PI / 180.0;
     }
 }
+

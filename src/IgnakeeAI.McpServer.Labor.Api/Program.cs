@@ -60,8 +60,9 @@ namespace IgnakeeAI.McpServer.Labor.Api
                         }
                         catch (Exception ex) when (i < maxAttempts)
                         {
+                            var delaySeconds = Math.Min(Math.Pow(2, i), 8);
                             logger.LogWarning(ex, "Fallo migración intento {Attempt}/{Max}. Reintentando...", i, maxAttempts);
-                            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
+                            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
                         }
                         catch (Exception ex)
                         {

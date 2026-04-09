@@ -2,6 +2,7 @@ using IgnakeeAI.McpServer.Labor.Application.Interfaces;
 using IgnakeeAI.McpServer.Labor.Application.Models;
 using IgnakeeAI.McpServer.Labor.Domain.Entities;
 using IgnakeeAI.McpServer.Labor.Domain.Enums;
+using IgnakeeAI.McpServer.Labor.Domain.Utils;
 
 namespace IgnakeeAI.McpServer.Labor.Application.Services
 {
@@ -160,7 +161,7 @@ namespace IgnakeeAI.McpServer.Labor.Application.Services
             return workers.Select(w =>
             {
                 var dist = w.Latitude.HasValue && w.Longitude.HasValue
-                    ? Math.Round(CalculateDistanceKm(lat, lng, w.Latitude.Value, w.Longitude.Value), 1)
+                    ? Math.Round(GeoUtils.CalculateDistanceKm(lat, lng, w.Latitude.Value, w.Longitude.Value), 1)
                     : (double?)null;
                 return new WorkerMatch(w,
                     $"Cercano: {(dist.HasValue ? $"{dist} km" : "ubicación desconocida")} desde tu posición. " +
@@ -202,19 +203,5 @@ namespace IgnakeeAI.McpServer.Labor.Application.Services
                 .Where(t => t.Length > 2 || _shortTermWhitelist.Contains(t))
                 .Take(7)
                 .ToList();
-
-        /// <summary>Calcula la distancia en km entre dos coordenadas usando la fórmula de Haversine.</summary>
-        private static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
-        {
-            const double R = 6371.0; // Radio de la Tierra en km
-            var dLat = ToRad(lat2 - lat1);
-            var dLon = ToRad(lon2 - lon1);
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
-                  + Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2))
-                  * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-            return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        }
-
-        private static double ToRad(double deg) => deg * Math.PI / 180.0;
     }
 }
