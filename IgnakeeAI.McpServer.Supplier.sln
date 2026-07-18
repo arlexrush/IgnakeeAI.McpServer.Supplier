@@ -47,6 +47,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		github\workflows\release.yml = github\workflows\release.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SAP", "SAP", "{814A97D0-14BF-4871-8316-EF4EA4DA223D}"
+	ProjectSection(SolutionItems) = preProject
+		docs\SAP_Mock_Connecting\sap.s4.Product.json = docs\SAP_Mock_Connecting\sap.s4.Product.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +92,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{850726CD-BF3E-4ADF-8734-20B211D3C689} = {F9C2E2DA-179F-48A5-B2A8-B2579D9CB7D6}
+		{814A97D0-14BF-4871-8316-EF4EA4DA223D} = {D99FAFEC-8F11-4506-8D88-7B3490A8D50A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6335BBFF-CD3E-4518-B42D-CEDD385FE093}

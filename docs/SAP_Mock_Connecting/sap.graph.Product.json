@@ -1,0 +1,3045 @@
+{
+  "externalDocs": {
+    "description": "Graph Documentation",
+    "url": "https://help.sap.com/docs/graph"
+  },
+  "info": {
+    "title": "Product",
+    "version": "1",
+    "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches."
+  },
+  "openapi": "3.0.2",
+  "x-sap-shortText": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches.",
+  "x-sap-stateInfo": {
+    "state": "Beta"
+  },
+  "servers": [
+    {
+      "description": "Sandbox URL",
+      "url": "https://sandbox.api.sap.com/sapgraph"
+    },
+    {
+      "description": "Production URL",
+      "url": "https://eu10.graph.sap/catalog/sap.graph"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Product",
+      "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches."
+    }
+  ],
+  "components": {
+    "schemas": {
+      "sap.graph.Product": {
+        "title": "Product",
+        "type": "object",
+        "x-sapgraph-root-entity": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Qualified identifier",
+            "x-sapgraph-key": true
+          },
+          "createdAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was created."
+          },
+          "changedAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was changed last."
+          },
+          "displayId": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A unique identifier that represents a product."
+          },
+          "name": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "The language dependent name of a product.",
+            "x-sapgraph-filterable": false,
+            "x-sapgraph-sortable": false,
+            "x-sapgraph-immutable": true,
+            "x-sapgraph-localized": true
+          },
+          "productType": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true
+          },
+          "_productType": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/ProductType#/components/schemas/sap.graph.ProductType"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of productType"
+          },
+          "status": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-Plant Product Status The cross-plant product status\nrestricts the usability of the product for all plants, that\nis, it defines whether a warning or error message is\ndisplayed if you include the product in a particular\nfunction"
+          },
+          "baseUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "A code that represents the base unit of measure of the\nproduct."
+          },
+          "division": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A way of grouping materials, products, or services.\nDivisions are used to determine the sales areas and the\nbusiness areas for a material, product, or service. A\nproduct or service is always assigned to just one division."
+          },
+          "_division": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/Division#/components/schemas/sap.graph.Division"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of division"
+          },
+          "quantityConversions": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_quantityConversions"
+            },
+            "type": "array",
+            "description": "A product has conversion factors between units of measure.\nFor example, a product is measured in gallons and liters."
+          },
+          "quantityCharacteristics": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics"
+            },
+            "type": "array",
+            "description": "A product can have multiple characteristics."
+          },
+          "globalTradeItemNumbers": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers"
+            },
+            "type": "array",
+            "description": "Global Trade Item numbers (GTINs)."
+          },
+          "categoryAssignments": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_categoryAssignments"
+            },
+            "type": "array",
+            "x-sapgraph-filterable": false,
+            "x-sapgraph-sortable": false
+          },
+          "plants": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_plants"
+            },
+            "type": "array",
+            "description": "A product is planned, procured, and distributed by multiple\nplants."
+          },
+          "distributionChains": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_distributionChains"
+            },
+            "type": "array",
+            "description": "Sales and delivery data for the product, specific for a\ncombination of sales organization and distribution channel."
+          },
+          "_c4c": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.c4c/ProductCollection#/components/schemas/sap.c4c.ProductCollection"
+              }
+            ],
+            "nullable": true,
+            "description": "Association to corresponding ProductCollection entity in sap.c4c"
+          },
+          "_s4": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.s4/Product#/components/schemas/sap.s4.Product"
+              }
+            ],
+            "nullable": true,
+            "description": "Association to corresponding Product entity in sap.s4",
+            "x-sapgraph-supported-by": [
+              "C_TRIALBALANCE_CDS"
+            ]
+          }
+        },
+        "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches.",
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product-create": {
+        "title": "Product (for create)",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Qualified identifier"
+          },
+          "createdAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was created."
+          },
+          "changedAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was changed last."
+          },
+          "displayId": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A unique identifier that represents a product."
+          },
+          "name": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "The language dependent name of a product."
+          },
+          "productType": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true
+          },
+          "_productType": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/ProductType#/components/schemas/sap.graph.ProductType-create"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of productType"
+          },
+          "status": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-Plant Product Status The cross-plant product status\nrestricts the usability of the product for all plants, that\nis, it defines whether a warning or error message is\ndisplayed if you include the product in a particular\nfunction"
+          },
+          "baseUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "A code that represents the base unit of measure of the\nproduct."
+          },
+          "division": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A way of grouping materials, products, or services.\nDivisions are used to determine the sales areas and the\nbusiness areas for a material, product, or service. A\nproduct or service is always assigned to just one division."
+          },
+          "_division": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/Division#/components/schemas/sap.graph.Division-create"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of division"
+          },
+          "quantityConversions": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_quantityConversions-create"
+            },
+            "type": "array",
+            "description": "A product has conversion factors between units of measure.\nFor example, a product is measured in gallons and liters."
+          },
+          "quantityCharacteristics": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics-create"
+            },
+            "type": "array",
+            "description": "A product can have multiple characteristics."
+          },
+          "globalTradeItemNumbers": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers-create"
+            },
+            "type": "array",
+            "description": "Global Trade Item numbers (GTINs)."
+          },
+          "categoryAssignments": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_categoryAssignments-create"
+            },
+            "type": "array"
+          },
+          "plants": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_plants-create"
+            },
+            "type": "array",
+            "description": "A product is planned, procured, and distributed by multiple\nplants."
+          },
+          "distributionChains": {
+            "items": {
+              "$ref": "#/components/schemas/sap.graph.Product_distributionChains-create"
+            },
+            "type": "array",
+            "description": "Sales and delivery data for the product, specific for a\ncombination of sales organization and distribution channel."
+          },
+          "_c4c": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.c4c/ProductCollection#/components/schemas/sap.c4c.ProductCollection"
+              }
+            ],
+            "nullable": true
+          },
+          "_s4": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.s4/Product#/components/schemas/sap.s4.Product"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches."
+      },
+      "sap.graph.Product-update": {
+        "title": "Product (for update)",
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was created."
+          },
+          "changedAt": {
+            "example": "2017-04-13T15:51:04Z",
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Date and time the entity was changed last."
+          },
+          "displayId": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A unique identifier that represents a product."
+          },
+          "productType": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-Plant Product Status The cross-plant product status\nrestricts the usability of the product for all plants, that\nis, it defines whether a warning or error message is\ndisplayed if you include the product in a particular\nfunction"
+          },
+          "baseUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "A code that represents the base unit of measure of the\nproduct."
+          },
+          "division": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "A way of grouping materials, products, or services.\nDivisions are used to determine the sales areas and the\nbusiness areas for a material, product, or service. A\nproduct or service is always assigned to just one division."
+          }
+        },
+        "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches."
+      },
+      "sap.graph.Product_categoryAssignments": {
+        "title": "Product_categoryAssignments",
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "example": "ABC",
+            "x-sapgraph-key": true
+          },
+          "_category": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/ProductCategory#/components/schemas/sap.graph.ProductCategory"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of category"
+          }
+        },
+        "x-sapgraph-creatable": false,
+        "x-sapgraph-updatable": false,
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product_distributionChains": {
+        "title": "Product_distributionChains",
+        "type": "object",
+        "properties": {
+          "salesOrganization": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Sales Organization.",
+            "x-sapgraph-key": true
+          },
+          "_salesOrganization": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/SalesOrganization#/components/schemas/sap.graph.SalesOrganization"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of salesOrganization"
+          },
+          "distributionChannel": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Distribution Channel.",
+            "x-sapgraph-key": true
+          },
+          "_distributionChannel": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/DistributionChannel#/components/schemas/sap.graph.DistributionChannel"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of distributionChannel"
+          },
+          "salesStatus": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-distribution-chain material status Indicates whether\nthe material may be used in individual functions in Sales\nand Distribution for all distribution chains.."
+          },
+          "salesUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Unit of measure in which the material is sold."
+          },
+          "minimumOrderQuantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Minimum order quantity in base unit of measure The minimum\nquantity a customer may order.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "pricingProduct": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Material master record that the system uses as a reference\nfor pricing purposes."
+          },
+          "_pricingProduct": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/Product#/components/schemas/sap.graph.Product"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of pricingProduct"
+          },
+          "salesText": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Product related sales text.",
+            "x-sapgraph-immutable": true,
+            "x-sapgraph-localized": true
+          }
+        },
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product_distributionChains-create": {
+        "title": "Product_distributionChains (for create)",
+        "type": "object",
+        "properties": {
+          "salesOrganization": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Sales Organization."
+          },
+          "_salesOrganization": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/SalesOrganization#/components/schemas/sap.graph.SalesOrganization-create"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of salesOrganization"
+          },
+          "distributionChannel": {
+            "type": "string",
+            "example": "ABC",
+            "description": "Distribution Channel."
+          },
+          "_distributionChannel": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/DistributionChannel#/components/schemas/sap.graph.DistributionChannel-create"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of distributionChannel"
+          },
+          "salesStatus": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-distribution-chain material status Indicates whether\nthe material may be used in individual functions in Sales\nand Distribution for all distribution chains.."
+          },
+          "salesUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Unit of measure in which the material is sold."
+          },
+          "minimumOrderQuantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Minimum order quantity in base unit of measure The minimum\nquantity a customer may order."
+          },
+          "pricingProduct": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Material master record that the system uses as a reference\nfor pricing purposes."
+          },
+          "_pricingProduct": {
+            "allOf": [
+              {
+                "$ref": "https://api.sap.com/api/1.0/sapgraph/sap.graph/Product#/components/schemas/sap.graph.Product-create"
+              }
+            ],
+            "nullable": true,
+            "description": "The link to the details of pricingProduct"
+          },
+          "salesText": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Product related sales text."
+          }
+        },
+        "required": [
+          "salesOrganization",
+          "distributionChannel"
+        ]
+      },
+      "sap.graph.Product_distributionChains-update": {
+        "title": "Product_distributionChains (for update)",
+        "type": "object",
+        "properties": {
+          "salesStatus": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Cross-distribution-chain material status Indicates whether\nthe material may be used in individual functions in Sales\nand Distribution for all distribution chains.."
+          },
+          "salesUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Unit of measure in which the material is sold."
+          },
+          "minimumOrderQuantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Minimum order quantity in base unit of measure The minimum\nquantity a customer may order."
+          },
+          "pricingProduct": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Material master record that the system uses as a reference\nfor pricing purposes."
+          }
+        }
+      },
+      "sap.graph.Product_globalTradeItemNumbers": {
+        "title": "Product_globalTradeItemNumbers",
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "Unit code.",
+            "x-sapgraph-key": true
+          },
+          "gtin": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Global Trade Item number (GTIN)."
+          }
+        },
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product_globalTradeItemNumbers-create": {
+        "title": "Product_globalTradeItemNumbers (for create)",
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "Unit code."
+          },
+          "gtin": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Global Trade Item number (GTIN)."
+          }
+        },
+        "required": [
+          "unit"
+        ]
+      },
+      "sap.graph.Product_globalTradeItemNumbers-update": {
+        "title": "Product_globalTradeItemNumbers (for update)",
+        "type": "object",
+        "properties": {
+          "gtin": {
+            "type": "string",
+            "example": "ABC",
+            "nullable": true,
+            "description": "Global Trade Item number (GTIN)."
+          }
+        }
+      },
+      "sap.graph.Product_plants": {
+        "title": "Product_plants",
+        "type": "object",
+        "properties": {
+          "plantId": {
+            "type": "string",
+            "example": "ABC",
+            "description": "ID of the plant.",
+            "x-sapgraph-key": true
+          }
+        }
+      },
+      "sap.graph.Product_plants-create": {
+        "title": "Product_plants (for create)",
+        "type": "object",
+        "properties": {
+          "plantId": {
+            "type": "string",
+            "example": "ABC",
+            "description": "ID of the plant."
+          }
+        },
+        "required": [
+          "plantId"
+        ]
+      },
+      "sap.graph.Product_plants-update": {
+        "title": "Product_plants (for update)",
+        "type": "object"
+      },
+      "sap.graph.Product_quantityCharacteristics": {
+        "title": "Product_quantityCharacteristics",
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "Unit code.",
+            "x-sapgraph-key": true
+          },
+          "grossWeight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Gross Weight.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "grossWeightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Gross Weight Unit."
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Volume.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "volumeUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Volume Unit."
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Width.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "widthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Width Unit."
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Height.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "heightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Heigth Unit."
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Length.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "lengthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Length Unit."
+          }
+        },
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product_quantityCharacteristics-create": {
+        "title": "Product_quantityCharacteristics (for create)",
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "Unit code."
+          },
+          "grossWeight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Gross Weight."
+          },
+          "grossWeightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Gross Weight Unit."
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Volume."
+          },
+          "volumeUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Volume Unit."
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Width."
+          },
+          "widthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Width Unit."
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Height."
+          },
+          "heightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Heigth Unit."
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Length."
+          },
+          "lengthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Length Unit."
+          }
+        },
+        "required": [
+          "unit"
+        ]
+      },
+      "sap.graph.Product_quantityCharacteristics-update": {
+        "title": "Product_quantityCharacteristics (for update)",
+        "type": "object",
+        "properties": {
+          "grossWeight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Gross Weight."
+          },
+          "grossWeightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Gross Weight Unit."
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Volume."
+          },
+          "volumeUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Volume Unit."
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Width."
+          },
+          "widthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Width Unit."
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Height."
+          },
+          "heightUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Heigth Unit."
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Length."
+          },
+          "lengthUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "nullable": true,
+            "description": "Length Unit."
+          }
+        }
+      },
+      "sap.graph.Product_quantityConversions": {
+        "title": "Product_quantityConversions",
+        "type": "object",
+        "properties": {
+          "alternativeUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "A code that represents an alternative unit of measure for\nconversion.",
+            "x-sapgraph-key": true
+          },
+          "quantityNumerator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity numerator.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          },
+          "quantityDenominator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity denominator.",
+            "x-sapgraph-precision": 22,
+            "x-sapgraph-scale": 6
+          }
+        },
+        "x-sapgraph-deletable": false
+      },
+      "sap.graph.Product_quantityConversions-create": {
+        "title": "Product_quantityConversions (for create)",
+        "type": "object",
+        "properties": {
+          "alternativeUnit": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3,
+            "description": "A code that represents an alternative unit of measure for\nconversion."
+          },
+          "quantityNumerator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity numerator."
+          },
+          "quantityDenominator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity denominator."
+          }
+        },
+        "required": [
+          "alternativeUnit"
+        ]
+      },
+      "sap.graph.Product_quantityConversions-update": {
+        "title": "Product_quantityConversions (for update)",
+        "type": "object",
+        "properties": {
+          "quantityNumerator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity numerator."
+          },
+          "quantityDenominator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": 0,
+            "format": "decimal",
+            "multipleOf": 0.000001,
+            "nullable": true,
+            "description": "Quantity denominator."
+          }
+        }
+      },
+      "error": {
+        "properties": {
+          "error": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "details": {
+                "items": {
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "innererror": {
+                "description": "The structure of this object is service-specific",
+                "type": "object"
+              },
+              "message": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      }
+    },
+    "parameters": {
+      "count": {
+        "description": "Include count of items, see [Count](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptioncount)",
+        "in": "query",
+        "name": "$count",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "skip": {
+        "description": "Skip the first n items, see [Paging - Skip](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionskip)",
+        "in": "query",
+        "name": "$skip",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "top": {
+        "description": "Show only the first n items, see [Paging - Top](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptiontop)",
+        "example": 50,
+        "in": "query",
+        "name": "$top",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "search": {
+        "description": "Search items by search phrases, see [Searching](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionsearch)",
+        "in": "query",
+        "name": "$search",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "error": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/error"
+            }
+          }
+        },
+        "description": "Error"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "To use this API, you need to obtain the Access Token. Please follow steps in the official documentation of Graph.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "paths": {
+    "/sap.graph/Product": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "id",
+                  "id desc",
+                  "createdAt",
+                  "createdAt desc",
+                  "changedAt",
+                  "changedAt desc",
+                  "displayId",
+                  "displayId desc",
+                  "productType",
+                  "productType desc",
+                  "status",
+                  "status desc",
+                  "baseUnit",
+                  "baseUnit desc",
+                  "division",
+                  "division desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "id",
+                  "createdAt",
+                  "changedAt",
+                  "displayId",
+                  "name",
+                  "productType",
+                  "status",
+                  "baseUnit",
+                  "division"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Expand related entities, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "explode": false,
+            "in": "query",
+            "name": "$expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "*",
+                  "_productType",
+                  "_division",
+                  "quantityConversions",
+                  "quantityCharacteristics",
+                  "globalTradeItemNumbers",
+                  "categoryAssignments",
+                  "plants",
+                  "distributionChains",
+                  "_c4c",
+                  "_s4"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product-create"
+              }
+            }
+          },
+          "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "id",
+                  "createdAt",
+                  "changedAt",
+                  "displayId",
+                  "name",
+                  "productType",
+                  "status",
+                  "baseUnit",
+                  "division"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Expand related entities, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "explode": false,
+            "in": "query",
+            "name": "$expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "*",
+                  "_productType",
+                  "_division",
+                  "quantityConversions",
+                  "quantityCharacteristics",
+                  "globalTradeItemNumbers",
+                  "categoryAssignments",
+                  "plants",
+                  "distributionChains",
+                  "_c4c",
+                  "_s4"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product-update"
+              }
+            }
+          },
+          "description": "Can be either tangible, such as physical goods such as\nmaterials or articles, or intangible, such as services and\ndigital goods that are part of the business activity of a\ncompany. It can be traded and it contributes directly or\nindirectly to the value chain. It does not extend to\ninstance level, such as individual materials stocked as\nphysical inventory, meaning that individual objects and\nserialized materials are not part of the product domain. It\nalso does not extend to subsets of a material, such as\nbatches.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/quantityConversions": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "alternativeUnit",
+                  "alternativeUnit desc",
+                  "quantityNumerator",
+                  "quantityNumerator desc",
+                  "quantityDenominator",
+                  "quantityDenominator desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "alternativeUnit",
+                  "quantityNumerator",
+                  "quantityDenominator"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved quantity conversions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_quantityConversions"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_quantityConversions",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of quantity conversions of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_quantityConversions-create"
+              }
+            }
+          },
+          "description": "New quantity conversion",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created quantity conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_quantityConversions"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single quantity conversion of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/quantityConversions/{alternativeUnit-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "alternativeUnit-1",
+          "required": true,
+          "description": "A code that represents an alternative unit of measure for\nconversion.",
+          "schema": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "alternativeUnit",
+                  "quantityNumerator",
+                  "quantityDenominator"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved quantity conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_quantityConversions"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single quantity conversion of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_quantityConversions-update"
+              }
+            }
+          },
+          "description": "New property values",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single quantity conversion of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/quantityCharacteristics": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "unit desc",
+                  "grossWeight",
+                  "grossWeight desc",
+                  "grossWeightUnit",
+                  "grossWeightUnit desc",
+                  "volume",
+                  "volume desc",
+                  "volumeUnit",
+                  "volumeUnit desc",
+                  "width",
+                  "width desc",
+                  "widthUnit",
+                  "widthUnit desc",
+                  "height",
+                  "height desc",
+                  "heightUnit",
+                  "heightUnit desc",
+                  "length",
+                  "length desc",
+                  "lengthUnit",
+                  "lengthUnit desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "grossWeight",
+                  "grossWeightUnit",
+                  "volume",
+                  "volumeUnit",
+                  "width",
+                  "widthUnit",
+                  "height",
+                  "heightUnit",
+                  "length",
+                  "lengthUnit"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved quantity characteristics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_quantityCharacteristics",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of quantity characteristics of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics-create"
+              }
+            }
+          },
+          "description": "New quantity characteristic",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created quantity characteristic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single quantity characteristic of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/quantityCharacteristics/{unit-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "unit-1",
+          "required": true,
+          "description": "Unit code.",
+          "schema": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "grossWeight",
+                  "grossWeightUnit",
+                  "volume",
+                  "volumeUnit",
+                  "width",
+                  "widthUnit",
+                  "height",
+                  "heightUnit",
+                  "length",
+                  "lengthUnit"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved quantity characteristic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single quantity characteristic of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_quantityCharacteristics-update"
+              }
+            }
+          },
+          "description": "New property values",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single quantity characteristic of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/globalTradeItemNumbers": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "unit desc",
+                  "gtin",
+                  "gtin desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "gtin"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved global trade item numbers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_globalTradeItemNumbers",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of global trade item numbers of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers-create"
+              }
+            }
+          },
+          "description": "New global trade item number",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created global trade item number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single global trade item number of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/globalTradeItemNumbers/{unit-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "unit-1",
+          "required": true,
+          "description": "Unit code.",
+          "schema": {
+            "type": "string",
+            "example": "ABC",
+            "maxLength": 3
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "unit",
+                  "gtin"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved global trade item number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single global trade item number of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_globalTradeItemNumbers-update"
+              }
+            }
+          },
+          "description": "New property values",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single global trade item number of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/categoryAssignments": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "category",
+                  "category desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "category"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved category assignments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_categoryAssignments"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_categoryAssignments",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of category assignments of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/categoryAssignments/{category-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "category-1",
+          "required": true,
+          "description": "key: category",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "category"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved category assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_categoryAssignments"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single category assignment of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/plants": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "plantId",
+                  "plantId desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "plantId"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved plants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_plants"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_plants",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of plants of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_plants-create"
+              }
+            }
+          },
+          "description": "New plant",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created plant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_plants"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single plant of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/plants/{plantId-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "plantId-1",
+          "required": true,
+          "description": "ID of the plant.",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "plantId"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved plant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_plants"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single plant of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_plants-update"
+              }
+            }
+          },
+          "description": "New property values",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single plant of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "delete": {
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Delete a single plant of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/distributionChains": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "explode": false,
+            "in": "query",
+            "name": "$orderby",
+            "schema": {
+              "items": {
+                "enum": [
+                  "salesOrganization",
+                  "salesOrganization desc",
+                  "distributionChannel",
+                  "distributionChannel desc",
+                  "salesStatus",
+                  "salesStatus desc",
+                  "salesUnit",
+                  "salesUnit desc",
+                  "minimumOrderQuantity",
+                  "minimumOrderQuantity desc",
+                  "pricingProduct",
+                  "pricingProduct desc",
+                  "salesText",
+                  "salesText desc"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "salesOrganization",
+                  "distributionChannel",
+                  "salesStatus",
+                  "salesUnit",
+                  "minimumOrderQuantity",
+                  "pricingProduct",
+                  "salesText"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved distribution chains",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "value": {
+                      "items": {
+                        "$ref": "#/components/schemas/sap.graph.Product_distributionChains"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "title": "Collection of Product_distributionChains",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a list of distribution chains of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_distributionChains-create"
+              }
+            }
+          },
+          "description": "New distribution chain",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created distribution chain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_distributionChains"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Create a single distribution chain of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/sap.graph/Product/{id}/distributionChains/{salesOrganization-1}/{distributionChannel-1}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "description": "Qualified identifier",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "salesOrganization-1",
+          "required": true,
+          "description": "Sales Organization.",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        },
+        {
+          "in": "path",
+          "name": "distributionChannel-1",
+          "required": true,
+          "description": "Distribution Channel.",
+          "schema": {
+            "type": "string",
+            "example": "ABC"
+          }
+        }
+      ],
+      "get": {
+        "parameters": [
+          {
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "explode": false,
+            "in": "query",
+            "name": "$select",
+            "schema": {
+              "items": {
+                "enum": [
+                  "salesOrganization",
+                  "distributionChannel",
+                  "salesStatus",
+                  "salesUnit",
+                  "minimumOrderQuantity",
+                  "pricingProduct",
+                  "salesText"
+                ],
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved distribution chain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sap.graph.Product_distributionChains"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Retrieve a single distribution chain of a product.",
+        "tags": [
+          "Product"
+        ]
+      },
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sap.graph.Product_distributionChains-update"
+              }
+            }
+          },
+          "description": "New property values",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Change a single distribution chain of a product.",
+        "tags": [
+          "Product"
+        ]
+      }
+    },
+    "/$batch": {
+      "post": {
+        "description": "Group multiple requests into a single request payload, see [Batch Requests](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_BatchRequests).\n\n*Please note that \"Try it out\" is not supported for this request.*",
+        "requestBody": {
+          "content": {
+            "multipart/mixed;boundary=request-separator": {
+              "example": "--request-separator\nContent-Type: application/http\nContent-Transfer-Encoding: binary\n\nGET BudgetPeriod HTTP/1.1\nAccept: application/json\n\n\n--request-separator--",
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Batch request",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "multipart/mixed": {
+                "example": "--response-separator\nContent-Type: application/http\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{...}\n--response-separator--",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Batch response"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "summary": "Send a group of requests",
+        "tags": [
+          "Batch Requests"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "x-sapgraph-example": {
+    "id": "s4~21",
+    "createdAt": "2016-10-17T00:00:00Z",
+    "changedAt": "2016-10-17T00:00:00Z",
+    "displayId": "21",
+    "name": "Junior Consultant",
+    "productType": "SERV",
+    "status": "",
+    "baseUnit": "H",
+    "division": "00",
+    "quantityConversions": [
+      {
+        "alternativeUnit": "H",
+        "quantityNumerator": 1,
+        "quantityDenominator": 1
+      }
+    ],
+    "quantityCharacteristics": [
+      {
+        "unit": "H",
+        "grossWeight": 0,
+        "grossWeightUnit": "KG",
+        "volume": 0,
+        "volumeUnit": "",
+        "width": 0,
+        "widthUnit": "",
+        "height": 0,
+        "heightUnit": "",
+        "length": 0,
+        "lengthUnit": ""
+      }
+    ],
+    "globalTradeItemNumbers": [
+      {
+        "unit": "H",
+        "gtin": ""
+      }
+    ],
+    "categoryAssignments": [],
+    "plants": [],
+    "distributionChains": [
+      {
+        "salesOrganization": "DE10",
+        "distributionChannel": "10",
+        "salesStatus": "",
+        "salesUnit": "",
+        "minimumOrderQuantity": 0,
+        "pricingProduct": null,
+        "salesText": null
+      }
+    ]
+  }
+}
