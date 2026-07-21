@@ -60,6 +60,11 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
                     // ["ConnectionStrings:Catalog"] = $"Data Source=:memory:;Cache=Shared;Mode=Memory",
                     // ["ConnectionStrings:Catalog"] = "Data Source=:memory:",
                     ["Erp:Provider"] = "",
+                    ["Admin:ApiKey"] = "admin-test-key",
+                    ["Mcp:Clients:0:ClientId"] = "legio-test",
+                    ["Mcp:Clients:0:ApiKey"] = "mcp-test-key",
+                    ["Mcp:Clients:0:Scopes:0"] = "catalog.read",
+                    ["Mcp:Clients:0:Scopes:1"] = "availability.read",
                     ["SUPPLIER_VENDOR_NAME"] = "Proveedor Test",
                     ["SUPPLIER_CONTACT_EMAIL"] = "test@proveedor.local",
                     ["SUPPLIER_CONTACT_PHONE"] = "+34 900 000 000",
@@ -97,7 +102,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
             var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<SupplierCatalogDbContext>();
 
-            await db.Database.EnsureCreatedAsync();
+            await db.Database.EnsureDeletedAsync();
+            // Usa exactamente el mismo camino de esquema que producción y registra
+            // la migración para que el endpoint /health no reporte migraciones pendientes.
+            await db.Database.MigrateAsync();
 
             // ── Limpiar datos previos antes de sembrar ────────────────────────────
             // Necesario porque IClassFixture comparte la instancia de factory entre

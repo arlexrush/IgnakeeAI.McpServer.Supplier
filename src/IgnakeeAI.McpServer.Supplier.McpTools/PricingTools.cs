@@ -1,4 +1,5 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Application.Services;
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
@@ -6,7 +7,7 @@ using System.Text.Json;
 namespace IgnakeeAI.McpServer.Supplier.McpTools
 {
     /// <summary>
-    /// Tool MCP OBLIGATORIA: getPrice.
+    /// Tool MCP pública: GetPrice.
     /// El agente Aristóteles llama a esta tool como primera acción en cada servidor MCP.
     /// Delega toda la lógica a CatalogSearchService (Application layer).
     /// </summary>
@@ -14,11 +15,14 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
     public class PricingTools
     {
         private readonly CatalogSearchService _search;
-        private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
         public PricingTools(CatalogSearchService search) => _search = search;
 
-        [McpServerTool, Description(
+        [McpServerTool(Name = SupplierMcpToolNames.GetPrice), Description(
             "Gets the price for a construction material or resource. " +
             "Searches by item code (exact) or description (fuzzy). " +
             "Returns unitPrice, currency, unit, packSize, packPrice, validUntil, and contact info.")]
@@ -29,7 +33,7 @@ namespace IgnakeeAI.McpServer.Supplier.McpTools
             CancellationToken cancellationToken = default)
         {
             var result = await _search.GetPriceAsync(itemDescription, itemCode, currency, cancellationToken);
-            return JsonSerializer.Serialize(result, JsonOpts);
+            return JsonSerializer.Serialize(result, JsonOptions);
         }
     }
 }

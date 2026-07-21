@@ -46,8 +46,6 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors
             var imported = 0;
             foreach (var row in records)
             {
-                if (string.IsNullOrWhiteSpace(row.ItemCode)) continue;
-
                 var existing = _db.Products.FirstOrDefault(p => p.ItemCode == row.ItemCode);
                 var product = existing ?? new CatalogProduct();
 
@@ -70,6 +68,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors
                 product.QualityRating = row.QualityRating;
                 product.UpdatedAt = DateTime.UtcNow;
                 product.IsActive = true;
+
+                if (!CatalogProductImportValidator.TryValidate(product, out var rejectionReason))
+                {
+                    _logger.LogWarning("Producto CSV rechazado: {Reason}.", rejectionReason);
+                    continue;
+                }
 
                 if (existing is null)
                     _db.Products.Add(product);

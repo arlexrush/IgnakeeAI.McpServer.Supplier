@@ -4,6 +4,10 @@ on:
   push:
     tags: ['v*']
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -32,6 +36,6 @@ jobs:
           file: src/IgnakeeAI.McpServer.Supplier.Api/Dockerfile
           push: true
           tags: |
-            ghcr.io/ignakeeai/mcp-supplier-server:${{ steps.version.outputs.VERSION }}
-            ghcr.io/ignakeeai/mcp-supplier-server:latest
+            ghcr.io/arlexrush/mcp-supplier-server:${{ steps.version.outputs.VERSION }}
+            ghcr.io/arlexrush/mcp-supplier-server:latest
           platforms: linux/amd64,linux/arm64

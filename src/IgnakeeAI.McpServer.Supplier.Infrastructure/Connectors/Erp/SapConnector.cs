@@ -121,6 +121,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp
                         product.UpdatedAt = DateTime.UtcNow;
                         product.IsActive = true;
 
+                        if (!CatalogProductImportValidator.TryValidate(product, out var rejectionReason))
+                        {
+                            _logger.LogWarning("Producto SAP rechazado: {Reason}.", rejectionReason);
+                            continue;
+                        }
+
                         if (existing is null)
                             _db.Products.Add(product);
 

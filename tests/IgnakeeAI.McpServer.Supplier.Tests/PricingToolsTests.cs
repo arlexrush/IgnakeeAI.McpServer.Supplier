@@ -39,7 +39,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             var tools = CreateTools();
 
             // Act
-            var json = await tools.GetPrice(itemDescription: "", itemCode: "CEM-STD");
+            var json = await tools.GetPrice(itemDescription: "cemento estándar", itemCode: "CEM-STD");
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -69,7 +69,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         }
 
         [Fact]
-        public async Task GetPrice_WithOnSaleProduct_ReturnsEffectiveAndOriginalPrice()
+        public async Task GetPrice_WithOnSaleProduct_ReturnsFormalCamelCaseContract()
         {
             // Arrange
             var tools = CreateTools();
@@ -81,9 +81,11 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
 
             // Assert
             Assert.True(root.GetProperty("found").GetBoolean());
-            Assert.True(root.GetProperty("isOnSale").GetBoolean());
             Assert.Equal(4.50m, root.GetProperty("unitPrice").GetDecimal());      // EffectivePrice
-            Assert.Equal(6.00m, root.GetProperty("originalPrice").GetDecimal());  // UnitPrice original
+            Assert.Equal("EUR", root.GetProperty("currency").GetString());
+            Assert.Contains("\"found\"", json);
+            Assert.Contains("\"unitPrice\"", json);
+            Assert.DoesNotContain("\"UnitPrice\"", json);
         }
 
         [Fact]

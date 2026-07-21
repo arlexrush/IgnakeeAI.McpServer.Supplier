@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11903.348 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IgnakeeAI.McpServer.Supplier.Api", "src\IgnakeeAI.McpServer.Supplier.Api\IgnakeeAI.McpServer.Supplier.Api.csproj", "{4C4B9A46-7452-4889-A006-33F633F5E514}"
 EndProject
@@ -37,6 +37,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución",
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.env.example = .env.example
+		.env.production = .env.production
 		LICENSE.txt = LICENSE.txt
 		README.md = README.md
 	EndProjectSection

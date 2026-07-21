@@ -1,4 +1,5 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Application.Services;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
@@ -8,6 +9,7 @@ using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore; // Agrega esta directiva using para habilitar UseSqlServer, UseSqlite, UseNpgsql, UseMySql
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace IgnakeeAI.McpServer.Supplier.Infrastructure
 {
@@ -19,12 +21,30 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure
     public static class DependencyInjection
     {
         public static IServiceCollection AddInfrastructure(
-            this IServiceCollection services, IConfiguration configuration)
+            this IServiceCollection services, IConfiguration configuration,
+            IHostEnvironment environment)
         {
             // ── Base de datos ────────────────────────────────────────────────────────
-            var provider = configuration["DatabaseProvider"]?.ToLowerInvariant() ?? "sqlite"; // Lee el proveedor de base de datos desde la configuración, con "sqlite" como opción por defecto para facilitar el desarrollo y pruebas sin necesidad de configurar un servidor de base de datos.
+            var configuredProvider = configuration["DatabaseProvider"]?.Trim();
+            var provider = string.IsNullOrWhiteSpace(configuredProvider)
+                ? environment.IsProduction() ? "" : "sqlite"
+                : configuredProvider.ToLowerInvariant();
+
+            if (environment.IsProduction() && provider is not ("postgresql" or "postgres"))
+            {
+                throw new InvalidOperationException(
+                    "En producción DatabaseProvider debe ser 'postgresql' o 'postgres'. " +
+                    "No se permite iniciar producción con SQLite.");
+            }
+
             var connectionString = configuration.GetConnectionString("Catalog")
-                ?? "Data Source=catalog.db";
+                ?? (environment.IsProduction() ? "" : "Data Source=catalog.db");
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException(
+                    "ConnectionStrings:Catalog es obligatoria para el proveedor de base de datos configurado.");
+            }
 
             // Configura el DbContext con el proveedor seleccionado dinámicamente
             services.AddDbContext<SupplierCatalogDbContext>(options =>
@@ -35,15 +55,32 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure
                     "postgresql" or "postgres" => options.UseNpgsql(connectionString), // Excelente para producción, especialmente en entornos Linux, con buen rendimiento y soporte para características avanzadas.
                     "sqlserver" => options.UseSqlServer(connectionString), // Opción común en entornos Windows, con integración nativa en el ecosistema Microsoft, pero puede ser más pesado y costoso que otras opciones.
                     "mysql" => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)), // Popular en entornos web, especialmente con PHP, buena compatibilidad y rendimiento decente.
-                    _ => options.UseSqlite(connectionString)
+                    _ => throw new InvalidOperationException(
+                        $"Proveedor de base de datos no soportado: '{provider}'.")
                 };
             });
 
             // ── Repositorio (puerto → adaptador) ────────────────────────────────────
             services.AddScoped<ICatalogRepository, EfCatalogRepository>();
+            services.AddScoped<CatalogSyncAuditWriter>();
 
             // ── Configuración del proveedor ─────────────────────────────────────────
             services.AddSingleton<ISupplierConfig, SupplierConfig>();
+            services.AddOptions<SupplierLocation>()
+                .Bind(configuration.GetSection("Supplier:Location"))
+                .Validate(location =>
+                {
+                    var hasLatitude = location.Latitude.HasValue;
+                    var hasLongitude = location.Longitude.HasValue;
+                    var coordinatesAreValid = hasLatitude && hasLongitude &&
+                        location.Latitude is >= -90 and <= 90 &&
+                        location.Longitude is >= -180 and <= 180;
+
+                    return (!hasLatitude && !hasLongitude || coordinatesAreValid) &&
+                        (!location.IsValidated || coordinatesAreValid);
+                },
+                "Supplier:Location requiere coordenadas válidas juntas; IsValidated=true también requiere coordenadas.")
+                .ValidateOnStart();
 
             // ── Servicio de aplicación ───────────────────────────────────────────────
             services.AddScoped<CatalogSearchService>();
