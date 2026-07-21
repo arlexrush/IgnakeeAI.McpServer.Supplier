@@ -40,7 +40,7 @@ Este contrato es la referencia para:
 
 ## 4) Tools expuestas
 
-## 4.1 `getPrice`
+## 4.1 `GetPrice`
 
 Obtiene precio de un material/recurso por código exacto o descripción.
 
@@ -67,7 +67,7 @@ Campos esperados:
 
 ---
 
-## 4.2 `searchAlternatives`
+## 4.2 `SearchAlternatives`
 
 Busca productos alternativos/sustitutos.
 
@@ -103,9 +103,11 @@ Busca productos alternativos/sustitutos.
 				   ] 
 }
 
+`PriceResult` no incluye credenciales ni claves de infraestructura.
+
 ---
 
-## 4.3 `checkAvailability`
+## 4.3 `CheckAvailability`
 
 Consulta stock y plazo estimado de entrega.
 
@@ -122,7 +124,7 @@ Campos esperados:
 
 ---
 
-## 4.4 `getBusinessHours`
+## 4.4 `GetBusinessHours`
 
 Devuelve datos de atención del proveedor.
 
@@ -148,6 +150,106 @@ Devuelve datos de atención del proveedor.
 - **Errores técnicos**: error MCP con mensaje trazable en logs.
 - No se deben exponer secretos (credenciales ERP, connection strings) en respuestas de tools.
 
+### Autenticaci?n y autorizaci?n
+
+- `/mcp` requiere una API key de `Mcp:Clients` con `catalog.read`.
+- Las consultas de disponibilidad requieren adem?s `availability.read` cuando se
+  apliquen pol?ticas espec?ficas al transporte.
+- Las API keys administrativas (`Admin:ApiKey`) no son v?lidas para `/mcp`.
+- Las API keys MCP no son v?lidas para `/admin/*`.
+- Ausencia o invalidez de la key: `401 Unauthorized`.
+- Key autenticada sin scope o rol requerido: `403 Forbidden`.
+- Headers Legio GUID inv?lidos: `400 Bad Request`.
+
+### Ejemplo `initialize`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+	"protocolVersion": "2025-03-26",
+	"capabilities": {},
+	"clientInfo": { "name": "legio", "version": "1.0" }
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+	"name": "SearchAlternatives",
+	"arguments": {
+	  "itemDescription": "cemento portland",
+	  "category": "cementos",
+	  "criteria": "cheaper",
+	  "requiredQuantity": 100,
+	  "maxResults": 5,
+	  "currency": "EUR"
+	}
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+	"name": "CheckAvailability",
+	"arguments": {
+	  "itemCode": "CEM-001"
+	}
+  }
+}
+```
+
+`GetBusinessHours` se invoca con `name: "GetBusinessHours"` y un objeto
+`arguments` vacío.
+
+### Ejemplo `tools/list`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+La respuesta debe anunciar `GetPrice`, `SearchAlternatives`, `CheckAvailability` y
+`GetBusinessHours`.
+
+Tras `initialize`, el cliente puede enviar la notificación:
+
+```json
+{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
+```
+
+### Ejemplo `tools/call`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+	"name": "GetPrice",
+	"arguments": {
+	  "itemDescription": "cemento portland 25kg",
+	  "itemCode": "CEM-001",
+	  "currency": "EUR"
+	}
+  }
+}
+```
+
 ---
 
 ## 6) Compatibilidad y pruebas
@@ -162,8 +264,8 @@ Cada cambio de contrato debe:
 ## 7) Historial del contrato
 
 - `1.0.0` — contrato inicial para:
-  - `getPrice`
-  - `searchAlternatives`
-  - `checkAvailability`
-  - `getBusinessHours`
+	- `GetPrice`
+  - `SearchAlternatives`
+  - `CheckAvailability`
+  - `GetBusinessHours`
  

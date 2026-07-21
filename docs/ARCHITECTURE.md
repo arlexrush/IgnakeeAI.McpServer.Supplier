@@ -5,10 +5,10 @@
 `IgnakeeAI.McpServer.Supplier` es un servidor MCP (Model Context Protocol) orientado a catálogo de proveedor para construcción, diseñado para:
 
 - Exponer herramientas MCP para:
-  - consulta de precio (`getPrice`)
-  - búsqueda de alternativas (`searchAlternatives`)
-  - disponibilidad (`checkAvailability`)
-  - datos de atención (`getBusinessHours`)
+  - consulta de precio (`GetPrice`)
+  - búsqueda de alternativas (`SearchAlternatives`)
+  - disponibilidad (`CheckAvailability`)
+  - datos de atención (`GetBusinessHours`)
 - Centralizar información de catálogo desde múltiples fuentes:
   - base de datos local (principal)
   - importación por `CSV`
@@ -45,6 +45,27 @@ graph TD
     X --> DB
 ```
 
+Flujo de lectura contractual:
+
+```text
+Cliente MCP de Legio
+        ?
+HTTP MCP /mcp
+        ?
+McpTools
+        ?
+CatalogSearchService
+        ?
+ICatalogRepository
+        ?
+SupplierCatalogDbContext
+```
+
+El endpoint `/mcp` se autentica con una credencial de cliente MCP y scopes de
+lectura. Los endpoints `/admin/*` están separados y requieren rol
+`supplier-admin`. CORS se limita mediante `Cors:AllowedOrigins` y no sustituye
+la autenticación.
+
 ---
 
 ## 3. Estructura de proyectos y responsabilidades
@@ -62,7 +83,7 @@ graph TD
 
 ## 4. Flujo funcional principal
 
-## 4.1 Consulta de precio (`getPrice`)
+## 4.1 Consulta de precio (`GetPrice`)
 
 1. El cliente invoca tool MCP.
 2. `PricingTools` delega en `CatalogSearchService`.
@@ -94,7 +115,7 @@ sequenceDiagram
     P-->>U: JSON (found, unitPrice, contact...)
 ```
 
-## 4.2 Búsqueda de alternativas (`searchAlternatives`)
+## 4.2 Búsqueda de alternativas (`SearchAlternatives`)
 
 `CatalogSearchService` aplica estrategia por `SubstitutionCriteria`:
 
@@ -227,6 +248,9 @@ Tools registradas desde ensamblado `McpTools`:
 - `CheckAvailability(...)`
 - `GetBusinessHours()`
 
+La versión de contrato es `1.0.0`. Los nombres son PascalCase y las respuestas
+JSON se serializan en `camelCase`.
+
 Endpoint MCP:
 
 - `POST/transport MCP`: `/mcp` (HTTP transport registrado con `.WithHttpTransport()`).
@@ -238,6 +262,20 @@ Endpoint health:
 Endpoint raíz informativo:
 
 - `GET /` devuelve metadata del servidor y tools declaradas.
+
+`GET /health` comprueba MCP, tools, base de datos, catálogo y migraciones.
+
+La ubicación operativa se configura mediante `Supplier:Location`, incluyendo
+latitud y longitud validadas. El servidor no calcula distancias ni selecciona
+proveedores; esas decisiones pertenecen a Legio/SmartRouting.
+
+La trazabilidad usa los headers `X-Legio-*` y registra únicamente identificadores,
+versión contractual, duración, ruta y estado. Nunca se registran API keys,
+contraseñas, tokens ni connection strings.
+
+Las sincronizaciones ERP, CSV y Excel actualizan el catálogo local mediante
+upsert por `ItemCode`; las tools MCP nunca consultan directamente los sistemas
+externos.
 
 ---
 

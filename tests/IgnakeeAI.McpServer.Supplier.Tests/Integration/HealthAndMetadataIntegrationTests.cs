@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using IgnakeeAI.McpServer.Supplier.Application.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text.Json;
 using Xunit;
@@ -90,7 +91,9 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
 
             // Assert
             Assert.Equal("IgnakeeAI MCP Supplier Server", root.GetProperty("server").GetString());
-            Assert.Equal("/mcp", root.GetProperty("mcp_endpoint").GetString());
+            Assert.Equal("1.0.0", root.GetProperty("contractVersion").GetString());
+            Assert.Equal("/mcp", root.GetProperty("mcpEndpoint").GetString());
+            Assert.Equal("/health", root.GetProperty("healthEndpoint").GetString());
         }
 
         [Fact]
@@ -110,10 +113,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
                 .ToList();
 
             // Assert
-            Assert.Contains("getPrice", tools);
-            Assert.Contains("searchAlternatives", tools);
-            Assert.Contains("checkAvailability", tools);
-            Assert.Contains("getBusinessHours", tools);
+            Assert.Contains(SupplierMcpToolNames.GetPrice, tools);
+            Assert.Contains(SupplierMcpToolNames.SearchAlternatives, tools);
+            Assert.Contains(SupplierMcpToolNames.CheckAvailability, tools);
+            Assert.Contains(SupplierMcpToolNames.GetBusinessHours, tools);
         }
 
         [Fact]

@@ -79,6 +79,13 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors
                     product.UpdatedAt = DateTime.UtcNow;
                     product.IsActive = true;
 
+                    if (!CatalogProductImportValidator.TryValidate(product, out var rejectionReason))
+                    {
+                        _logger.LogWarning("Producto Excel rechazado en fila {Row}: {Reason}.",
+                            row.RowNumber(), rejectionReason);
+                        continue;
+                    }
+
                     if (existing is null)
                         _db.Products.Add(product);
 

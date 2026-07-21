@@ -25,6 +25,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             _factory = factory;
             _client = factory.CreateClient();
+            _client.DefaultRequestHeaders.Add("X-Api-Key", "admin-test-key");
         }
 
         public async ValueTask InitializeAsync()

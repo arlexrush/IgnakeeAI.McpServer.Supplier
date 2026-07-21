@@ -1,5 +1,6 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using IgnakeeAI.McpServer.Supplier.Application.Models;
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 using IgnakeeAI.McpServer.Supplier.Domain.Enums;
 
@@ -25,6 +26,8 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
         public async Task<PriceResult> GetPriceAsync(
             string itemDescription, string? itemCode, string currency, CancellationToken ct)
         {
+            ValidateDescription(itemDescription);
+            ValidateCurrency(currency);
             CatalogProduct? product = null;
 
             // 1. Búsqueda exacta por código
@@ -42,36 +45,42 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
 
             if (product is null)
             {
-                return new PriceResult(Found: false);
+                return new PriceResult { Found = false, Currency = currency.ToUpperInvariant() };
             }
 
-            return new PriceResult(
-                Found: true,
-                ItemCode: product.ItemCode,
-                Description: product.Description,
-                UnitPrice: product.EffectivePrice,
-                Currency: product.Currency,
-                Unit: product.Unit,
-                PackSize: product.PackSize,
-                PackPrice: product.PackPrice,
-                Specification: product.Specification,
-                Presentation: product.Presentation,
-                IsOnSale: product.IsOnSale,
-                OriginalPrice: product.IsOnSale ? product.UnitPrice : null,
-                QualityRating: product.QualityRating,
-                Url: product.ProductUrl,
-                ValidUntil: product.ValidUntil,
-                UpdatedAt: product.UpdatedAt,
-                ContactEmail: _supplierConfig.ContactEmail,
-                ContactPhone: _supplierConfig.ContactPhone,
-                ContactAddress: _supplierConfig.ContactAddress);
+            return new PriceResult
+            {
+                Found = true,
+                ItemCode = product.ItemCode,
+                Description = product.Description,
+                UnitPrice = product.EffectivePrice,
+                IsOnSale = product.IsOnSale && product.SalePrice.HasValue,
+                OriginalPrice = product.IsOnSale && product.SalePrice.HasValue
+                    ? product.UnitPrice
+                    : null,
+                Currency = product.Currency,
+                Unit = product.Unit,
+                PackSize = product.PackSize,
+                PackPrice = product.PackPrice,
+                ValidUntil = product.ValidUntil.HasValue ? new DateTimeOffset(product.ValidUntil.Value) : null,
+                ContactEmail = _supplierConfig.ContactEmail,
+                ContactPhone = _supplierConfig.ContactPhone,
+                ContactAddress = _supplierConfig.ContactAddress,
+                VendorName = _supplierConfig.VendorName
+            };
         }
 
         /// <summary>Busca alternativas según criterio de sustitución.</summary>
         public async Task<IReadOnlyList<AlternativeMatch>> SearchAlternativesAsync(
             string itemDescription, string? category, SubstitutionCriteria criteria,
-            decimal? requiredQuantity, int maxResults, CancellationToken ct)
+            decimal? requiredQuantity, int maxResults, string currency, CancellationToken ct)
         {
+            ValidateDescription(itemDescription);
+            ValidateCurrency(currency);
+            if (maxResults is < 1 or > 100)
+                throw new ArgumentOutOfRangeException(nameof(maxResults), "Debe estar entre 1 y 100.");
+            if (requiredQuantity is <= 0)
+                throw new ArgumentOutOfRangeException(nameof(requiredQuantity), "Debe ser mayor que cero.");
             // Inferir categoría si no se proporcionó
             if (string.IsNullOrWhiteSpace(category))
             {
@@ -97,16 +106,35 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
         /// <summary>Consulta disponibilidad por código.</summary>
         public async Task<AvailabilityResult> CheckAvailabilityAsync(string itemCode, CancellationToken ct)
         {
+            if (string.IsNullOrWhiteSpace(itemCode))
+                throw new ArgumentException("itemCode es obligatorio.", nameof(itemCode));
             var product = await _catalog.FindByCodeAsync(itemCode, ct);
             if (product is null)
             {
-                return new AvailabilityResult(Found: false);
+                return new AvailabilityResult { Found = false, ItemCode = itemCode };
             }
 
-            return new AvailabilityResult(
-                Found: true,
-                AvailableStock: product.AvailableStock ?? 0,
-                LeadTimeDays: product.LeadTimeDays ?? 0);
+            return new AvailabilityResult
+            {
+                Found = true,
+                ItemCode = product.ItemCode,
+                AvailableStock = Math.Max(0, product.AvailableStock ?? 0),
+                LeadTimeDays = Math.Max(0, product.LeadTimeDays ?? 0),
+                Message = (product.AvailableStock ?? 0) > 0 ? "Disponible" : "Sin stock"
+            };
+        }
+
+        private static void ValidateDescription(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("itemDescription es obligatorio.", nameof(value));
+        }
+
+        private static void ValidateCurrency(string currency)
+        {
+            if (string.IsNullOrWhiteSpace(currency) || currency.Length != 3 ||
+                currency.Any(c => !char.IsAsciiLetter(c)))
+                throw new ArgumentException("currency debe ser un código ISO 4217 de tres letras.", nameof(currency));
         }
 
         // ── Estrategias de búsqueda ─────────────────────────────────

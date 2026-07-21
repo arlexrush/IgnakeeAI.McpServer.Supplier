@@ -1,14 +1,18 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace IgnakeeAI.McpServer.Supplier.Api
 {
     public static class AdminCatalogEndPoint
     {
-        public static void MapAdminCatalogEndpoints(this WebApplication app)
+        public static RouteGroupBuilder MapAdminCatalogEndpoints(this WebApplication app)
         {
+            var admin = app.MapGroup("/admin")
+                .RequireAuthorization("SupplierAdminPolicy");
+
             /// <summary>
             /// POST /admin/sync/erp, sincroniza el catálogo con el ERP configurado. 
             /// Requiere que el conector ERP esté disponible y correctamente configurado. 
@@ -17,8 +21,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             /// devuelve un error detallado para ayudar a diagnosticar el problema. 
             /// Esta operación es idempotente y puede ser ejecutada periódicamente para mantener el catálogo actualizado con los datos del ERP.
             /// </summary>
-            app.MapPost("/admin/sync/erp", async (IServiceProvider sp) =>
+            admin.MapPost("/sync/erp", async (IServiceProvider sp, CatalogSyncAuditWriter auditWriter, CancellationToken cancellationToken) =>
             {
+                var startedAt = DateTimeOffset.UtcNow;
                 var connector = sp.GetService<IErpConnector>();
                 if (connector is null)
                     return Results.BadRequest(new { error = "No hay conector ERP configurado. Revisa Erp:Provider en appsettings.json." });
@@ -26,15 +31,44 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 if (!await connector.IsAvailableAsync())
                     return Results.BadRequest(new { error = $"El conector {connector.ErpName} no está disponible. Revisa la configuración." });
 
-                var count = await connector.SyncProductsAsync();
-                return Results.Ok(new
+                try
                 {
-                    erp = connector.ErpName,
-                    productsSynced = count,
-                    syncedAt = DateTime.UtcNow
-                });
-            }).WithTags("Admin")
-            .RequireAuthorization("AdminPolicy");
+                    // Bloque de sincronización validado sin cambios funcionales.
+                    var count = await connector.SyncProductsAsync(cancellationToken);
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Erp,
+                        connector.ErpName,
+                        count,
+                        count,
+                        0,
+                        0,
+                        startedAt,
+                        true,
+                        cancellationToken: cancellationToken);
+
+                    return Results.Ok(new
+                    {
+                        erp = connector.ErpName,
+                        productsSynced = count,
+                        syncedAt = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Erp,
+                        connector.ErpName,
+                        0,
+                        0,
+                        0,
+                        0,
+                        startedAt,
+                        false,
+                        ex.GetType().Name,
+                        cancellationToken);
+                    throw;
+                }
+            }).WithTags("Admin");
 
             /// <summary>
             /// POST /admin/sync/excel, importa un catálogo desde un archivo Excel (.xlsx). 
@@ -43,7 +77,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             /// Si no se envía un archivo o si el archivo no es válido, devuelve un error detallado para ayudar a diagnosticar el problema. 
             /// Esta operación es idempotente y puede ser ejecutada periódicamente para mantener el catálogo actualizado con los datos del Excel.
             /// </summary>
-            app.MapPost("/admin/sync/excel", async (IFormFile? file, ExcelCatalogConnector connector) =>
+            admin.MapPost("/sync/excel", async (IFormFile? file, ExcelCatalogConnector connector, CatalogSyncAuditWriter auditWriter, CancellationToken cancellationToken) =>
             {
                 if (file is null)
                     return Results.BadRequest(new { error = "Envía un archivo .xlsx en el form-data con key 'file'." });
@@ -57,7 +91,18 @@ namespace IgnakeeAI.McpServer.Supplier.Api
 
                 try
                 {
-                    var count = await connector.ImportAsync(tempPath);
+                    var startedAt = DateTimeOffset.UtcNow;
+                    var count = await connector.ImportAsync(tempPath, cancellationToken);
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Excel,
+                        null,
+                        count,
+                        count,
+                        0,
+                        0,
+                        startedAt,
+                        true,
+                        cancellationToken: cancellationToken);
                     return Results.Ok(new { source = "excel", fileName = file.FileName, productsImported = count });
                 }
                 finally
@@ -65,8 +110,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     File.Delete(tempPath);
                 }
             }).DisableAntiforgery()
-            .WithTags("Admin")
-            .RequireAuthorization("AdminPolicy");
+            .WithTags("Admin");
 
             /// <summary>
             /// POST /admin/sync/csv, importa un catálogo desde un archivo CSV (.csv). 
@@ -75,7 +119,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             /// Si no se envía un archivo o si el archivo no es válido, devuelve un error detallado para ayudar a diagnosticar el problema. 
             /// Esta operación es idempotente y puede ser ejecutada periódicamente para mantener el catálogo actualizado con los datos del CSV.
             /// </summary>
-            app.MapPost("/admin/sync/csv", async (IFormFile? file, CsvCatalogConnector connector) =>
+            admin.MapPost("/sync/csv", async (IFormFile? file, CsvCatalogConnector connector, CatalogSyncAuditWriter auditWriter, CancellationToken cancellationToken) =>
             {
                 if (file is null)
                     return Results.BadRequest(new { error = "Envía un archivo .csv en el form-data con key 'file'." });
@@ -89,7 +133,18 @@ namespace IgnakeeAI.McpServer.Supplier.Api
 
                 try
                 {
-                    var count = await connector.ImportAsync(tempPath);
+                    var startedAt = DateTimeOffset.UtcNow;
+                    var count = await connector.ImportAsync(tempPath, cancellationToken);
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Csv,
+                        null,
+                        count,
+                        count,
+                        0,
+                        0,
+                        startedAt,
+                        true,
+                        cancellationToken: cancellationToken);
                     return Results.Ok(new { source = "csv", fileName = file.FileName, productsImported = count });
                 }
                 finally
@@ -97,15 +152,14 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     File.Delete(tempPath);
                 }
             }).DisableAntiforgery()
-            .WithTags("Admin")
-            .RequireAuthorization("AdminPolicy");
+            .WithTags("Admin");
 
             /// <summary>
             /// GET /admin/catalog/stats, devuelve estadísticas del catálogo, incluyendo el número total de productos activos, 
             /// el número de productos en oferta y una distribución de productos por categoría. 
             /// Esta información es útil para monitorear la salud del catálogo y tomar decisiones informadas sobre promociones y gestión de inventario.
             /// </summary>
-            app.MapGet("/admin/catalog/stats", async (SupplierCatalogDbContext db) =>
+            admin.MapGet("/catalog/stats", async (SupplierCatalogDbContext db) =>
             {
                 var total = await db.Products.CountAsync(p => p.IsActive);
                 var onSale = await db.Products.CountAsync(p => p.IsActive && p.IsOnSale);
@@ -116,9 +170,17 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     .ToListAsync();
 
                 return Results.Ok(new { totalProducts = total, productsOnSale = onSale, categories });
-            }).WithTags("Admin")
-            .RequireAuthorization("AdminPolicy");
+            }).WithTags("Admin");
 
+            admin.MapGet("/sync/audits", async (SupplierCatalogDbContext db, CancellationToken cancellationToken) =>
+                Results.Ok(await db.SyncAudits
+                    .AsNoTracking()
+                    .OrderByDescending(audit => audit.CompletedAt)
+                    .Take(100)
+                    .ToListAsync(cancellationToken)))
+                .WithTags("Admin");
+
+            return admin;
         }
 
     }

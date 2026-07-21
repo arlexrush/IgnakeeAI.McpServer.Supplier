@@ -53,6 +53,10 @@ automatizado con GitHub Actions y la publicación de imágenes Docker en GHCR.
 - En contenedor, la configuración se inyecta principalmente mediante **variables de entorno**,
   que tienen mayor prioridad que los ficheros `appsettings.json`.
 
+En desarrollo local, `appsettings.Development.json` y `.env.example` contienen valores
+no productivos coordinados para el cliente `legio-development`. Estos valores solo sirven
+para pruebas locales y deben sustituirse por secretos externos en producción.
+
 ### 4.2 Variables de entorno clave
 
 Copiar `.env.example` como `.env` y ajustar los valores:
@@ -82,6 +86,15 @@ cp .env.example .env
 | `SUPPLIER_CONTACT_PHONE`     | ambos            | Teléfono de contacto                         |
 | `SUPPLIER_CONTACT_ADDRESS`   | ambos            | Dirección del proveedor                      |
 | `SUPPLIER_BUSINESS_HOURS`    | ambos            | Horario de atención                          |
+| `Admin__ApiKey`              | ambos             | API key administrativa; usar secreto externo en producción |
+| `Mcp__ContractVersion`       | ambos             | Versión contractual, por defecto `1.0.0`    |
+| `Mcp__ProtocolVersion`       | opcional          | Versión MCP negociada/configurada            |
+| `Mcp__Clients__0__ClientId`  | producción       | Identificador del cliente MCP                |
+| `Mcp__Clients__0__ApiKey`    | producción       | API key del cliente MCP; secreto externo     |
+| `Mcp__Clients__0__Scopes__0` | producción       | Por ejemplo `catalog.read`                  |
+| `Mcp__Clients__0__Scopes__1` | producción       | Por ejemplo `availability.read`             |
+| `Supplier__Location__Latitude` | ambos           | Latitud operativa del proveedor              |
+| `Supplier__Location__Longitude`| ambos           | Longitud operativa del proveedor             |
 
 - **Regla de precedencia en .NET:**
 - Variables de entorno > `appsettings.{Environment}.json` > `appsettings.json`
@@ -136,6 +149,12 @@ Abrir en navegador: http://localhost:8081
 
 ### 5.3 Opción C: Docker Compose con PostgreSQL
 
+En producción, la API exige `DatabaseProvider=postgresql` (o `postgres`) y no
+permite iniciar accidentalmente con SQLite. El compose de PostgreSQL establece
+también `ASPNETCORE_ENVIRONMENT=Production`; la cadena
+`ConnectionStrings__Catalog` se construye a partir de las variables del fichero
+`.env`.
+
 #### Configurar credenciales en .env
 Configurar credenciales en .env:
 - POSTGRES_DB=supplier_catalog
@@ -144,6 +163,32 @@ Configurar credenciales en .env:
 
 #### Construir y levantar servicios
 - docker compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
+
+Las migraciones EF Core se aplican al arrancar la API mediante
+`Database.MigrateAsync()`. Para despliegues con migraciones gestionadas fuera de
+la aplicación, establecer `Database__ApplyMigrationsOnStartup=false` y ejecutar
+la actualización contra PostgreSQL antes de levantar la API.
+
+El `healthcheck` de PostgreSQL usa los mismos valores por defecto que el servicio
+(`supplier_catalog` y `supplier_user`) y acepta los valores personalizados de
+`.env`; así `depends_on` no libera la API hasta que PostgreSQL esté listo.
+
+### 5.4 Producción con el compose endurecido
+
+El fichero `docker-compose.production.yml` no contiene secretos y exige que se
+definan antes de arrancar:
+
+```powershell
+Copy-Item .env.example .env.production
+notepad .env.production
+docker compose --env-file .env.production -f docker-compose.production.yml config
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+```
+
+En `.env.production` se deben sustituir, como mínimo, `POSTGRES_PASSWORD`,
+`ADMIN_API_KEY`, `MCP_CLIENT_ID`, `MCP_API_KEY` y los datos reales del proveedor.
+El fichero debe permanecer fuera de Git. El comando `config` valida la
+interpolación sin iniciar contenedores.
 
 #### Verificar salud del servicio
 - docker compose ps
@@ -344,7 +389,7 @@ Esperado: HTTP 200, "Healthy"
 
 2. Metadata del servidor
 curl http://localhost:5100/
-Esperado: JSON con server, version, mcp_endpoint, tools
+Esperado: JSON con server, version, contractVersion, mcpEndpoint, healthEndpoint y tools
 
 3. Estadísticas del catálogo
 curl http://localhost:5100/admin/catalog/stats
@@ -360,8 +405,14 @@ curl -X POST http://localhost:5100/admin/sync/csv
 
 6. Verificar tool MCP
 curl -X POST http://localhost:5100/mcp 
+-H "X-Api-Key: <mcp-secret>" 
+-H "Accept: application/json, text/event-stream" 
 -H "Content-Type: application/json" 
--d '{"method":"tools/call","params":{"name":"getPrice","arguments":{"itemDescription":"cemento"}}}'
+-d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"GetPrice","arguments":{"itemDescription":"cemento","currency":"EUR"}}}'
+
+7. Logs y estado de contenedores
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 api postgres
 
 
 ---
@@ -411,7 +462,7 @@ Developer │
 - **Nunca** incluir credenciales reales en `appsettings.json` ni en el repositorio.
 - Usar `.env.production` fuera del repositorio o un gestor de secretos (Vault, Azure Key Vault).
 - Proteger los endpoints `/admin/*` con autenticación antes de exponer a internet.
-- Restringir CORS en producción (actualmente `AllowAnyOrigin` — solo válido en desarrollo).
+- Restringir CORS en producción mediante `Cors:AllowedOrigins`.
 - Activar TLS mediante Nginx/Traefik como reverse proxy delante del puerto `5100`.
 - Aplicar rate limiting sobre `/mcp` y `/admin/*` en producción.
 

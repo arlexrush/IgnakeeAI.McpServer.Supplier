@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 
 namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
 {
@@ -20,12 +21,12 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
     /// </summary>
     public class McpEndpointIntegrationTests : IClassFixture<SupplierApiFactory>, IAsyncLifetime
     {
-        private static readonly Dictionary<string, string> ToolNameMap = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, string> ToolNameMap = new(StringComparer.Ordinal)
         {
-            ["getPrice"] = "get_price",
-            ["searchAlternatives"] = "search_alternatives",
-            ["checkAvailability"] = "check_availability",
-            ["getBusinessHours"] = "get_business_hours"
+            [SupplierMcpToolNames.GetPrice] = SupplierMcpToolNames.GetPrice,
+            [SupplierMcpToolNames.SearchAlternatives] = SupplierMcpToolNames.SearchAlternatives,
+            [SupplierMcpToolNames.CheckAvailability] = SupplierMcpToolNames.CheckAvailability,
+            [SupplierMcpToolNames.GetBusinessHours] = SupplierMcpToolNames.GetBusinessHours
         };
         private readonly ConcurrentDictionary<string, string> _resolvedToolNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly SupplierApiFactory _factory;
@@ -36,6 +37,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             _factory = factory;
             _client = factory.CreateClient();
+            _client.DefaultRequestHeaders.Add("X-Api-Key", "mcp-test-key");
             // _client.DefaultRequestHeaders.Add("Accept", "application/json, text/event-stream");
         }
 
@@ -98,10 +100,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
 
             // Assert — el endpoint MCP respondió con éxito y contiene las tool names
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Contains("get_price", body);
-            Assert.Contains("search_alternatives", body);
-            Assert.Contains("check_availability", body);
-            Assert.Contains("get_business_hours", body);
+            Assert.Contains(SupplierMcpToolNames.GetPrice, body);
+            Assert.Contains(SupplierMcpToolNames.SearchAlternatives, body);
+            Assert.Contains(SupplierMcpToolNames.CheckAvailability, body);
+            Assert.Contains(SupplierMcpToolNames.GetBusinessHours, body);
         }
 
         // ── POST /mcp — tools/call: getPrice ────────────────────────────────────
@@ -111,10 +113,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("getPrice", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.GetPrice, new
             {
                 itemCode = "CEM-STD",
-                itemDescription = ""
+                itemDescription = "cemento estándar"
             });
 
             // Act
@@ -133,7 +135,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var toolName = await ResolveToolNameAsync("getPrice", ct);
+            var toolName = await ResolveToolNameAsync(SupplierMcpToolNames.GetPrice, ct);
             var payload = BuildToolCallPayload(toolName, new
             {
                 itemDescription = "cemento premium estructural",
@@ -154,7 +156,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("getPrice", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.GetPrice, new
             {
                 itemDescription = "cemento oferta",
                 itemCode = (string?)null
@@ -176,7 +178,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("getPrice", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.GetPrice, new
             {
                 itemDescription = "producto inexistente xyz123",
                 itemCode = (string?)null
@@ -197,7 +199,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("searchAlternatives", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.SearchAlternatives, new
             {
                 itemDescription = "cemento premium",
                 category = "cementos",
@@ -222,7 +224,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("searchAlternatives", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.SearchAlternatives, new
             {
                 itemDescription = "cemento",
                 category = "cementos",
@@ -249,7 +251,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var toolName = await ResolveToolNameAsync("checkAvailability", ct);
+            var toolName = await ResolveToolNameAsync(SupplierMcpToolNames.CheckAvailability, ct);
             var payload = BuildToolCallPayload(toolName, new
             {
                 itemCode = "ACE-001"
@@ -278,7 +280,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("checkAvailability", new
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.CheckAvailability, new
             {
                 itemCode = "INEXISTENTE-999"
             });
@@ -298,7 +300,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
         {
             // Arrange
             var ct = TestContext.Current.CancellationToken;
-            var payload = BuildToolCallPayload("getBusinessHours", new { });
+            var payload = BuildToolCallPayload(SupplierMcpToolNames.GetBusinessHours, new { });
 
             // Act
             var response = await PostMcpAsync(payload, ct);

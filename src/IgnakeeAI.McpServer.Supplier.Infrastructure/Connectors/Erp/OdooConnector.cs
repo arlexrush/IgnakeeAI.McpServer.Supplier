@@ -148,6 +148,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp
                     product.UpdatedAt = DateTime.UtcNow;
                     product.IsActive = true;
 
+                    if (!CatalogProductImportValidator.TryValidate(product, out var rejectionReason))
+                    {
+                        _logger.LogWarning("Producto Odoo rechazado: {Reason}.", rejectionReason);
+                        continue;
+                    }
+
                     // ── Mapeo de campos personalizados (descomenta según tu Odoo) ──
                     // product.QualityRating = GetNullableIntProperty(p, "x_quality_rating");
                     // product.Specification = GetStringProperty(p, "x_specification");

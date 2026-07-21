@@ -25,6 +25,34 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             SeedCatalog();
         }
 
+        [Fact]
+        public async Task SearchAlternatives_WithBetterCriteria_ReturnsHighQualityProducts()
+        {
+            var json = await CreateTools().SearchAlternatives(
+                "cemento", "cementos", "better", maxResults: 5);
+            using var document = JsonDocument.Parse(json);
+
+            Assert.True(document.RootElement.GetProperty("found").GetBoolean());
+            Assert.All(document.RootElement.GetProperty("alternatives").EnumerateArray(), item =>
+                Assert.True(item.GetProperty("qualityRating").GetDecimal() >= 4));
+        }
+
+        [Fact]
+        public async Task SearchAlternatives_WithAnyCriteria_ReturnsAlternatives()
+        {
+            var json = await CreateTools().SearchAlternatives(
+                "cemento premium", "cementos", "any", maxResults: 2);
+            using var document = JsonDocument.Parse(json);
+
+            Assert.True(document.RootElement.GetProperty("found").GetBoolean());
+            Assert.True(document.RootElement.GetProperty("count").GetInt32() <= 2);
+        }
+
+        [Fact]
+        public async Task SearchAlternatives_WithInvalidLimit_ThrowsValidationError() =>
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => CreateTools().SearchAlternatives(
+                "cemento", "cementos", "any", maxResults: 0));
+
         public void Dispose()
         {
             _cts.Dispose();
@@ -121,20 +149,13 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             // Arrange
             var tools = CreateTools();
 
-            // Act
-            var json = await tools.SearchAlternatives(
+            // Act / Assert: los criterios desconocidos son un error de contrato.
+            await Assert.ThrowsAsync<ArgumentException>(() => tools.SearchAlternatives(
                 itemDescription: "cemento premium",
                 category: "cementos",
                 criteria: "invalid-criteria",
                 requiredQuantity: 26,
-                maxResults: 5);
-
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            // Assert
-            Assert.True(root.GetProperty("found").GetBoolean());
-            Assert.True(root.GetProperty("count").GetInt32() >= 1);
+                maxResults: 5));
         }
 
         [Fact]

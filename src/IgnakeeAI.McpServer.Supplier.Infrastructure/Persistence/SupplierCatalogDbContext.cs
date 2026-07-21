@@ -14,6 +14,7 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence
     public class SupplierCatalogDbContext : DbContext
     {
         public DbSet<CatalogProduct> Products => Set<CatalogProduct>();
+        public DbSet<CatalogSyncAuditEntity> SyncAudits => Set<CatalogSyncAuditEntity>();
 
         public SupplierCatalogDbContext(DbContextOptions<SupplierCatalogDbContext> options)
             : base(options) { }

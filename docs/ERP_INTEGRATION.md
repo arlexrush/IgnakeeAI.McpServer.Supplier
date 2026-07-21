@@ -7,7 +7,7 @@ Este documento describe cómo integrar y sincronizar el catálogo de productos e
 - ERP: `Odoo` o `SAP`
 - Ficheros: `CSV` o `Excel`
 
-La sincronización alimenta el catálogo local usado por las tools MCP (`getPrice`, `searchAlternatives`, `checkAvailability`).
+La sincronización alimenta el catálogo local usado por las tools MCP (`GetPrice`, `SearchAlternatives`, `CheckAvailability`).
 
 ---
 
@@ -111,7 +111,7 @@ Respuesta esperada (ejemplo):
 
 ## 5.6 Validación
 1. `GET /admin/catalog/stats`
-2. Consultar tool `getPrice` con un `itemCode` conocido de Odoo
+2. Consultar tool `GetPrice` con un `itemCode` conocido de Odoo
 
 ---
 
@@ -232,8 +232,8 @@ A `ItemCode`, B `Description`, C `Category`, D `Keywords`, E `Unit`, F `UnitPric
 
 1. `GET /health` devuelve estado saludable.
 2. `GET /admin/catalog/stats` muestra productos > 0.
-3. Tool `getPrice` encuentra códigos recién sincronizados.
-4. Tool `searchAlternatives` devuelve resultados por categoría/coste.
+3. Tool `GetPrice` encuentra códigos recién sincronizados.
+4. Tool `SearchAlternatives` devuelve resultados por categoría/coste.
 5. Logs sin errores de autenticación ni mapeo masivo.
 
 ---
@@ -261,6 +261,13 @@ A `ItemCode`, B `Description`, C `Category`, D `Keywords`, E `Unit`, F `UnitPric
 
 - No guardar credenciales reales en repositorio.
 - Usar secretos/variables de entorno en despliegues.
+- Separar siempre la credencial administrativa de las credenciales MCP de Legio:
+  - `Admin__ApiKey` para `/admin/*`.
+  - `Mcp__Clients__0__ApiKey` para el cliente MCP.
+  - `Mcp__Clients__0__ClientId` identifica al cliente.
+  - `Mcp__Clients__0__Scopes__0=catalog.read`.
+  - `Mcp__Clients__0__Scopes__1=availability.read`.
+- No configurar la misma API key en `Admin__ApiKey` y `Mcp__Clients:*`.
 - Proteger endpoints `/admin/*` antes de producción.
 - Limitar CORS y habilitar TLS en entorno productivo.
 

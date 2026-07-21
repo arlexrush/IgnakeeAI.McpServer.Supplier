@@ -45,6 +45,7 @@ packages/
 # ============================================================
 .env
 !.env.example
+.env.production
 *.env.local
 *.env.*.local
 appsettings.Local.json
