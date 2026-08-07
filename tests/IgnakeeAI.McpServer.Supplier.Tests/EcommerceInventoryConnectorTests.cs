@@ -32,17 +32,16 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             EcommerceMockHttpHandler handler,
             bool enabled = true,
             string baseUrl = "https://ecommerce.test",
-            string apiKeyValue = "test-secret-key")
+            string bearerToken = "test-bearer-token")
         {
             var options = Options.Create(new EcommerceInventoryOptions
             {
                 Enabled = enabled,
                 BaseUrl = baseUrl,
-                ApiKeyHeaderName = "X-Api-Key",
-                ApiKeyValue = apiKeyValue,
+                BearerToken = bearerToken,
                 TimeoutSeconds = 5,
-                ProductLookupPath = "/api/inventory/products/{productCode}",
-                CatalogSyncPath = "/api/inventory/products"
+                ProductLookupPath = "/api/v1/inventory/{productCode}",
+                CatalogSyncPath = "/api/v1/inventory"
             });
 
             var httpClient = new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
@@ -109,16 +108,30 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         }
 
         [Fact]
-        public async Task GetProductByCodeAsync_SendsApiKeyHeader()
+        public async Task GetProductByCodeAsync_SendsBearerAuthorizationHeader()
         {
             var handler = EcommerceMockHttpHandler.ForProduct(
                 HttpStatusCode.OK, EcommerceFakeResponses.ProductSingle());
-            var connector = CreateConnector(handler, apiKeyValue: "my-secret-key");
+            var connector = CreateConnector(handler, bearerToken: "my-jwt-token");
 
             await connector.GetProductByCodeAsync("ECO-001", _cts.Token);
 
-            Assert.Single(handler.ApiKeyHeaders);
-            Assert.Equal("my-secret-key", handler.ApiKeyHeaders[0]);
+            Assert.Single(handler.AuthorizationHeaders);
+            Assert.Equal("Bearer my-jwt-token", handler.AuthorizationHeaders[0]);
+        }
+
+        [Fact]
+        public async Task GetProductByCodeAsync_BearerTokenNotInUrl()
+        {
+            // Validates that the token never appears in any request URL (only in header)
+            var handler = EcommerceMockHttpHandler.ForProduct(
+                HttpStatusCode.OK, EcommerceFakeResponses.ProductSingle());
+            var connector = CreateConnector(handler, bearerToken: "super-secret-token");
+
+            await connector.GetProductByCodeAsync("ECO-001", _cts.Token);
+
+            Assert.All(handler.RequestUrls, url =>
+                Assert.DoesNotContain("super-secret-token", url));
         }
 
         [Fact]
@@ -242,8 +255,8 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         [Fact]
         public async Task GetCatalogPageAsync_ValidPage_ReturnsProducts()
         {
-            var handler = EcommerceMockHttpHandler.ForCatalog(page =>
-                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(page, 3, hasNextPage: false)));
+            var handler = EcommerceMockHttpHandler.ForCatalog(pageIndex =>
+                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(pageIndex, 3, totalCount: 3)));
             var connector = CreateConnector(handler);
 
             var products = await connector.GetCatalogPageAsync(1, 3, _cts.Token);
@@ -288,10 +301,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         public async Task GetCatalogPageAsync_MultiplePages_SendsCorrectPageNumbers()
         {
             var pagesRequested = new List<int>();
-            var handler = EcommerceMockHttpHandler.ForCatalog(page =>
+            var handler = EcommerceMockHttpHandler.ForCatalog(pageIndex =>
             {
-                pagesRequested.Add(page);
-                return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(page, 2, hasNextPage: page < 3));
+                pagesRequested.Add(pageIndex);
+                return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(pageIndex, 2, totalCount: 6));
             });
             var connector = CreateConnector(handler);
 
@@ -376,12 +389,163 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 ProductCode = "ECO-001",
                 Currency = null,
                 Price = 5m,
-                Status = "active"
+                Status = "Active",
+                IsAvailableForSale = true
             };
 
             var product = EcommerceInventoryConnector.MapToProduct(dto);
 
             Assert.Equal("EUR", product.Currency);
+        }
+
+        [Fact]
+        public void MapToProduct_NullPrice_MapsToZeroUnitPrice()
+        {
+            var dto = new EcommerceProductDto
+            {
+                ProductCode = "ECO-NOPRICE",
+                ProductName = "Sin precio",
+                Price = null,
+                Status = "Active",
+                IsAvailableForSale = true
+            };
+
+            var product = EcommerceInventoryConnector.MapToProduct(dto);
+
+            Assert.Equal(0m, product.UnitPrice);
+        }
+
+        [Fact]
+        public async Task GetProductByCodeAsync_NullPrice_MapsToZeroUnitPrice()
+        {
+            var handler = EcommerceMockHttpHandler.ForProduct(
+                HttpStatusCode.OK, EcommerceFakeResponses.ProductWithNullPrice());
+            var connector = CreateConnector(handler);
+
+            var product = await connector.GetProductByCodeAsync("ECO-NOPRICE", _cts.Token);
+
+            Assert.NotNull(product);
+            Assert.Equal(0m, product.UnitPrice);
+        }
+
+        [Fact]
+        public void MapToProduct_IsAvailableForSaleFalse_SetsIsActiveFalse()
+        {
+            var dto = new EcommerceProductDto
+            {
+                ProductCode = "ECO-001",
+                Price = 5m,
+                Status = "Active",
+                IsAvailableForSale = false   // not for sale
+            };
+
+            var product = EcommerceInventoryConnector.MapToProduct(dto);
+
+            Assert.False(product.IsActive);
+        }
+
+        [Fact]
+        public void MapToProduct_StatusNotActive_SetsIsActiveFalse()
+        {
+            var dto = new EcommerceProductDto
+            {
+                ProductCode = "ECO-001",
+                Price = 5m,
+                Status = "Discontinued",
+                IsAvailableForSale = true   // available but status not "Active"
+            };
+
+            var product = EcommerceInventoryConnector.MapToProduct(dto);
+
+            Assert.False(product.IsActive);
+        }
+
+        [Fact]
+        public void MapToProduct_BothActiveAndAvailable_SetsIsActiveTrue()
+        {
+            var dto = new EcommerceProductDto
+            {
+                ProductCode = "ECO-001",
+                Price = 5m,
+                Status = "Active",
+                IsAvailableForSale = true
+            };
+
+            var product = EcommerceInventoryConnector.MapToProduct(dto);
+
+            Assert.True(product.IsActive);
+        }
+
+        [Fact]
+        public async Task GetCatalogPageAsync_SendsPageIndexParam()
+        {
+            // Verify URL contains pageIndex= not page=
+            var handler = EcommerceMockHttpHandler.ForCatalog(_ =>
+                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(2, 50)));
+            var connector = CreateConnector(handler);
+
+            await connector.GetCatalogPageAsync(2, 50, _cts.Token);
+
+            Assert.Single(handler.RequestUrls);
+            Assert.Contains("pageIndex=2", handler.RequestUrls[0]);
+            Assert.Contains("pageSize=50", handler.RequestUrls[0]);
+            Assert.DoesNotContain("status=active", handler.RequestUrls[0]);
+        }
+
+        [Fact]
+        public async Task GetCatalogPageAsync_DataEnvelope_DeserializesCorrectly()
+        {
+            // The response uses "data" array, not "items" — verify the right products are parsed
+            var handler = EcommerceMockHttpHandler.ForCatalog(_ =>
+                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(1, 5)));
+            var connector = CreateConnector(handler);
+
+            var products = await connector.GetCatalogPageAsync(1, 5, _cts.Token);
+
+            // If "items" assumption remained, this would return 0 products
+            Assert.Equal(5, products.Count);
+        }
+
+        [Fact]
+        public async Task GetCatalogPageAsync_UnavailableProduct_SetsIsActiveFalse()
+        {
+            // Catalog response with isAvailableForSale=false — product should be imported but inactive
+            var handler = EcommerceMockHttpHandler.ForCatalog(_ =>
+                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageWithUnavailableProduct()));
+            var connector = CreateConnector(handler);
+
+            var products = await connector.GetCatalogPageAsync(1, 10, _cts.Token);
+
+            Assert.Single(products);
+            Assert.False(products[0].IsActive);
+        }
+
+        [Fact]
+        public async Task GetProductByCodeAsync_CancellationRequested_PropagatesCancellation()
+        {
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var handler = EcommerceMockHttpHandler.ForProduct(HttpStatusCode.OK,
+                EcommerceFakeResponses.ProductSingle());
+            var connector = CreateConnector(handler);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => connector.GetProductByCodeAsync("ECO-001", cts.Token));
+        }
+
+        [Fact]
+        public async Task GetCatalogPageAsync_CancellationRequested_PropagatesCancellation()
+        {
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var handler = EcommerceMockHttpHandler.ForCatalog(_ =>
+                (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(1, 5)));
+            var connector = CreateConnector(handler);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => connector.GetCatalogPageAsync(1, 5, cts.Token));
         }
 
         // ── CatalogSearchService: hybrid availability ────────────────────────────

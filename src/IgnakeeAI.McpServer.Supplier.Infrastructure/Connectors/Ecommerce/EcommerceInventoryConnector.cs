@@ -5,22 +5,26 @@ using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Web;
 
 namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
 {
     /// <summary>
     /// Adaptador HTTP autenticado que conecta con la API de inventario del ecommerce.
     ///
-    /// AUTENTICACIÓN: envía la clave API en el encabezado configurado en
-    ///   EcommerceInventory:ApiKeyHeaderName / ApiKeyValue.
+    /// AUTENTICACIÓN: envía un JWT en el encabezado Authorization (esquema Bearer).
+    /// La identidad técnica debe tener el rol INVENTORY_READER (o ADMIN para break-glass).
     /// No se incluyen credenciales en mensajes de error ni en logs.
+    ///
+    /// ENDPOINTS:
+    ///   GET /api/v1/inventory/{productCode}                           → producto individual
+    ///   GET /api/v1/inventory?pageIndex={n}&amp;pageSize={n}              → catálogo paginado (PaginationVm)
     ///
     /// COMPORTAMIENTO:
     ///   - 404 → resultado funcional "no encontrado" (null / lista vacía).
-    ///   - 401/403 → EcommerceAuthException (sin exponer la clave).
+    ///   - 401/403 → EcommerceAuthException (sin exponer el token).
     ///   - Timeout / error de red → EcommerceCommunicationException.
     ///   - JSON malformado → EcommerceMappingException.
     ///   - Respuesta con ProductCode vacío → producto descartado con advertencia.
@@ -92,11 +96,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
 
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
-                _logger.LogError("Error de autenticación/autorización en ecommerce ({StatusCode}).",
+                _logger.LogError("Error de autenticación/autorización en ecommerce ({StatusCode}). " +
+                    "Revisa EcommerceInventory:BearerToken y el rol INVENTORY_READER.",
                     (int)response.StatusCode);
                 throw new EcommerceAuthException(
                     $"Autenticación rechazada por el ecommerce (HTTP {(int)response.StatusCode}). " +
-                    "Revisa EcommerceInventory:ApiKeyValue.");
+                    "Revisa EcommerceInventory:BearerToken y el rol INVENTORY_READER.");
             }
 
             response.EnsureSuccessStatusCode();
@@ -125,16 +130,16 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
 
         /// <inheritdoc />
         public async Task<IReadOnlyList<CatalogProduct>> GetCatalogPageAsync(
-            int page, int pageSize, CancellationToken ct = default)
+            int pageIndex, int pageSize, CancellationToken ct = default)
         {
             if (!IsEnabled)
                 return [];
 
             var basePath = _options.CatalogSyncPath.TrimEnd('/');
             var separator = basePath.Contains('?') ? "&" : "?";
-            var path = $"{basePath}{separator}page={page}&pageSize={pageSize}&status=active";
+            var path = $"{basePath}{separator}pageIndex={pageIndex}&pageSize={pageSize}";
 
-            _logger.LogDebug("Solicitando página {Page} del catálogo ecommerce (pageSize={PageSize}).", page, pageSize);
+            _logger.LogDebug("Solicitando página {PageIndex} del catálogo ecommerce (pageSize={PageSize}).", pageIndex, pageSize);
 
             HttpResponseMessage response;
             try
@@ -144,15 +149,15 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
             }
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException || !ct.IsCancellationRequested)
             {
-                _logger.LogWarning("Timeout al leer página {Page} del catálogo ecommerce.", page);
+                _logger.LogWarning("Timeout al leer página {PageIndex} del catálogo ecommerce.", pageIndex);
                 throw new EcommerceCommunicationException(
-                    $"Timeout al leer la página {page} del catálogo ecommerce.", ex);
+                    $"Timeout al leer la página {pageIndex} del catálogo ecommerce.", ex);
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogWarning("Error de red al leer catálogo ecommerce página {Page}: {Type}.", page, ex.GetType().Name);
+                _logger.LogWarning("Error de red al leer catálogo ecommerce página {PageIndex}: {Type}.", pageIndex, ex.GetType().Name);
                 throw new EcommerceCommunicationException(
-                    $"Error de red al leer la página {page} del catálogo ecommerce.", ex);
+                    $"Error de red al leer la página {pageIndex} del catálogo ecommerce.", ex);
             }
 
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -163,7 +168,8 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
                 _logger.LogError("Error de autenticación/autorización en ecommerce ({StatusCode}).",
                     (int)response.StatusCode);
                 throw new EcommerceAuthException(
-                    $"Autenticación rechazada por el ecommerce (HTTP {(int)response.StatusCode}).");
+                    $"Autenticación rechazada por el ecommerce (HTTP {(int)response.StatusCode}). " +
+                    "Revisa EcommerceInventory:BearerToken y el rol INVENTORY_READER.");
             }
 
             response.EnsureSuccessStatusCode();
@@ -175,20 +181,20 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
             }
             catch (JsonException ex)
             {
-                _logger.LogError("Respuesta JSON malformada al leer página {Page} del catálogo ecommerce.", page);
+                _logger.LogError("Respuesta JSON malformada al leer página {PageIndex} del catálogo ecommerce.", pageIndex);
                 throw new EcommerceMappingException(
-                    $"Respuesta JSON malformada al leer la página {page} del catálogo ecommerce.", ex);
+                    $"Respuesta JSON malformada al leer la página {pageIndex} del catálogo ecommerce.", ex);
             }
 
-            if (pageDto?.Items is null or { Count: 0 })
+            if (pageDto?.Data is null or { Count: 0 })
                 return [];
 
-            var products = new List<CatalogProduct>(pageDto.Items.Count);
-            foreach (var dto in pageDto.Items)
+            var products = new List<CatalogProduct>(pageDto.Data.Count);
+            foreach (var dto in pageDto.Data)
             {
                 if (string.IsNullOrWhiteSpace(dto.ProductCode))
                 {
-                    _logger.LogWarning("Producto ignorado: ProductCode vacío en página {Page}.", page);
+                    _logger.LogWarning("Producto ignorado: ProductCode vacío en página {PageIndex}.", pageIndex);
                     continue;
                 }
 
@@ -206,11 +212,10 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
             var relPath = path.StartsWith('/') ? path : '/' + path;
             var request = new HttpRequestMessage(method, baseUrl + relPath);
 
-            if (!string.IsNullOrWhiteSpace(_options.ApiKeyHeaderName) &&
-                !string.IsNullOrWhiteSpace(_options.ApiKeyValue))
+            if (!string.IsNullOrWhiteSpace(_options.BearerToken))
             {
-                request.Headers.TryAddWithoutValidation(
-                    _options.ApiKeyHeaderName, _options.ApiKeyValue);
+                request.Headers.Authorization =
+                    new AuthenticationHeaderValue("Bearer", _options.BearerToken);
             }
 
             return request;
@@ -218,7 +223,9 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
 
         /// <summary>
         /// Convierte un DTO del ecommerce en la entidad de dominio CatalogProduct.
-        /// purchaseLeadTimeUnit normalizado: "hours" → días redondeando, "weeks" → ×7, default → días.
+        /// - price null → UnitPrice 0m (sin inventar precio; 0 indica precio no disponible).
+        /// - isAvailableForSale AND status "Active" → IsActive = true.
+        /// - purchaseLeadTimeUnit normalizado: "hours" → días redondeando, "weeks" → ×7, default → días.
         /// </summary>
         public static CatalogProduct MapToProduct(EcommerceProductDto dto)
         {
@@ -230,17 +237,20 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
                 ? NormalizeLeadTimeToDays(dto.PurchaseLeadTime.Value, dto.PurchaseLeadTimeUnit)
                 : (int?)null;
 
+            var isActive = dto.IsAvailableForSale &&
+                string.Equals(dto.Status, "Active", StringComparison.OrdinalIgnoreCase);
+
             return new CatalogProduct
             {
                 ItemCode = dto.ProductCode!,
                 Description = description,
                 Category = dto.Category ?? string.Empty,
-                UnitPrice = dto.Price,
+                UnitPrice = dto.Price ?? 0m,
                 Currency = !string.IsNullOrWhiteSpace(dto.Currency) ? dto.Currency : "EUR",
                 Unit = dto.UnitToSell ?? "ud",
                 AvailableStock = dto.Stock ?? 0,
                 LeadTimeDays = leadTimeDays,
-                IsActive = string.Equals(dto.Status, "active", StringComparison.OrdinalIgnoreCase),
+                IsActive = isActive,
                 UpdatedAt = DateTime.UtcNow
             };
         }

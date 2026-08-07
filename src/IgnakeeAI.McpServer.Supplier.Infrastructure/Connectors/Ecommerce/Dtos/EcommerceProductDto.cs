@@ -4,18 +4,20 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos
 {
     /// <summary>
     /// DTO para un producto individual devuelto por la API de inventario del ecommerce.
-    /// Refleja el contrato del endpoint GET /api/inventory/products/{productCode}.
+    /// Refleja el contrato del endpoint GET /api/v1/inventory/{productCode}.
     ///
     /// MAPPING → CatalogProduct:
-    ///   productCode       → ItemCode
-    ///   productName/desc  → Description
-    ///   category          → Category
-    ///   price             → UnitPrice
-    ///   currency          → Currency (default: "EUR")
-    ///   stock             → AvailableStock
-    ///   unitToSell        → Unit
-    ///   purchaseLeadTime  → LeadTimeDays (normalizado a días)
-    ///   status "active"   → IsActive = true
+    ///   productCode          → ItemCode
+    ///   productId            → referencia numérica (int?)
+    ///   productName/desc     → Description
+    ///   category             → Category
+    ///   price                → UnitPrice  (decimal? — null tolerado)
+    ///   currency             → Currency (default: "EUR")
+    ///   isAvailableForSale   → contribuye a IsActive
+    ///   stock                → AvailableStock
+    ///   unitToSell           → Unit
+    ///   purchaseLeadTime     → LeadTimeDays (normalizado a días)
+    ///   status "Active"      → contribuye a IsActive
     /// </summary>
     public sealed class EcommerceProductDto
     {
@@ -23,7 +25,7 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos
         public string? ProductCode { get; set; }
 
         [JsonPropertyName("productId")]
-        public string? ProductId { get; set; }
+        public int? ProductId { get; set; }
 
         [JsonPropertyName("productName")]
         public string? ProductName { get; set; }
@@ -35,10 +37,13 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos
         public string? Category { get; set; }
 
         [JsonPropertyName("price")]
-        public decimal Price { get; set; }
+        public decimal? Price { get; set; }
 
         [JsonPropertyName("currency")]
         public string? Currency { get; set; }
+
+        [JsonPropertyName("isAvailableForSale")]
+        public bool IsAvailableForSale { get; set; }
 
         [JsonPropertyName("stock")]
         public int? Stock { get; set; }
@@ -57,23 +62,27 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos
     }
 
     /// <summary>
-    /// DTO de página del catálogo paginado devuelto por GET /api/inventory/products.
+    /// DTO de página del catálogo paginado devuelto por GET /api/v1/inventory.
+    /// Refleja la semántica PaginationVm&lt;T&gt; del ecommerce.
     /// </summary>
     public sealed class EcommerceCatalogPageDto
     {
-        [JsonPropertyName("items")]
-        public List<EcommerceProductDto> Items { get; set; } = [];
+        [JsonPropertyName("data")]
+        public List<EcommerceProductDto> Data { get; set; } = [];
 
-        [JsonPropertyName("totalItems")]
-        public int TotalItems { get; set; }
+        [JsonPropertyName("count")]
+        public int Count { get; set; }
 
-        [JsonPropertyName("page")]
-        public int Page { get; set; }
+        [JsonPropertyName("pageIndex")]
+        public int PageIndex { get; set; }
 
         [JsonPropertyName("pageSize")]
         public int PageSize { get; set; }
 
-        [JsonPropertyName("hasNextPage")]
-        public bool HasNextPage { get; set; }
+        [JsonPropertyName("pageCount")]
+        public int PageCount { get; set; }
+
+        [JsonPropertyName("resultByPage")]
+        public int ResultByPage { get; set; }
     }
 }
