@@ -7,6 +7,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
     /// <summary>
     /// Handler HTTP que intercepta peticiones al endpoint de inventario del ecommerce.
     /// Devuelve respuestas simuladas según la ruta y el código HTTP configurados.
+    /// Captura el encabezado Authorization: Bearer <token> para validar que el token se envía correctamente.
     /// </summary>
     public sealed class EcommerceMockHttpHandler : HttpMessageHandler
     {
@@ -14,7 +15,9 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
 
         public List<HttpRequestMessage> Requests { get; } = [];
         public List<string> RequestUrls { get; } = [];
-        public List<string?> ApiKeyHeaders { get; } = [];
+
+        /// <summary>Valores del encabezado Authorization capturados, e.g. "Bearer my-token".</summary>
+        public List<string?> AuthorizationHeaders { get; } = [];
 
         /// <summary>Construye un handler con una función delegada de respuesta personalizada.</summary>
         public EcommerceMockHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
@@ -34,15 +37,15 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
 
         /// <summary>
         /// Handler que devuelve respuestas de catálogo paginado.
-        /// Llama a pageFactory con el número de página (1-based) para obtener la respuesta.
+        /// Llama a pageFactory con el número de página (pageIndex) para obtener la respuesta.
         /// </summary>
         public static EcommerceMockHttpHandler ForCatalog(
             Func<int, (HttpStatusCode status, string body)> pageFactory) =>
             new(request =>
             {
                 var url = request.RequestUri?.ToString() ?? "";
-                var page = ExtractQueryParam(url, "page");
-                var pageNum = int.TryParse(page, out var p) ? p : 1;
+                var pageParam = ExtractQueryParam(url, "pageIndex");
+                var pageNum = int.TryParse(pageParam, out var p) ? p : 1;
                 var (status, body) = pageFactory(pageNum);
                 return new HttpResponseMessage(status)
                 {
@@ -56,11 +59,9 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
             Requests.Add(request);
             RequestUrls.Add(request.RequestUri?.ToString() ?? "");
 
-            // Capturar el encabezado de la clave API
-            var headerValue = request.Headers.TryGetValues("X-Api-Key", out var vals)
-                ? vals.FirstOrDefault()
-                : null;
-            ApiKeyHeaders.Add(headerValue);
+            // Capturar el encabezado Authorization completo (p.ej. "******")
+            var authHeader = request.Headers.Authorization?.ToString();
+            AuthorizationHeaders.Add(authHeader);
 
             return Task.FromResult(_handler(request));
         }
