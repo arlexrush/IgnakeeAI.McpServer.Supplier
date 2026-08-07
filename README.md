@@ -165,6 +165,53 @@ curl -X POST http://localhost:5100/admin/sync/excel -F "file=@catalogo.xlsx"
 
 Hoja `Catalogo` (o primera hoja), columnas A–Q.
 
+### Ecommerce — IgnakeeEcommerce-BackEnd
+
+El conector de inventario ecommerce conecta con la API REST de inventario de `IgnakeeEcommerce-BackEnd`.
+
+**Habilitar la integración** (`appsettings.json` o variables de entorno):
+
+```json
+"EcommerceInventory": {
+  "Enabled": true,
+  "BaseUrl": "https://ecommerce.example.com",
+  "ApiKeyHeaderName": "X-Api-Key",
+  "ApiKeyValue": "",
+  "TimeoutSeconds": 10,
+  "ProductLookupPath": "/api/inventory/products/{productCode}",
+  "CatalogSyncPath": "/api/inventory/products",
+  "SyncPageSize": 100
+}
+```
+
+> **Seguridad:** nunca confirmes `ApiKeyValue` en el repositorio. Usa la variable de entorno `EcommerceInventory__ApiKeyValue` o un secret manager.
+
+**Sincronización manual del catálogo:**
+
+```bash
+curl -X POST http://localhost:5100/admin/sync/ecommerce \
+  -H "X-Admin-Key: <admin-key>"
+```
+
+Pagina por el catálogo activo del ecommerce y realiza upsert por `ItemCode`/`ProductCode`.
+
+**Disponibilidad en tiempo real (`CheckAvailability`):**
+Cuando `Enabled = true`, `checkAvailability` consulta el ecommerce en tiempo real antes de caer al catálogo local. Si el ecommerce falla o no responde, la operación continúa con el catálogo local sin romper el contrato MCP.
+
+**Mapping de campos:**
+
+| Campo ecommerce        | Campo `CatalogProduct`  | Notas                                    |
+|------------------------|-------------------------|------------------------------------------|
+| `productCode`          | `ItemCode`              | Identificador canónico externo           |
+| `productName`/`description` | `Description`     | description tiene prioridad              |
+| `category`             | `Category`              |                                          |
+| `price`                | `UnitPrice`             |                                          |
+| `currency`             | `Currency`              | Default: EUR                             |
+| `stock`                | `AvailableStock`        |                                          |
+| `unitToSell`           | `Unit`                  | Default: ud                              |
+| `purchaseLeadTime`     | `LeadTimeDays`          | Normalizado: hours÷24, weeks×7           |
+| `status = "active"`    | `IsActive = true`       | Cualquier otro valor → false             |
+
 Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 
 ---
@@ -179,6 +226,7 @@ Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 | `POST` | `/admin/sync/erp`     | Sincronizar catálogo desde ERP                |
 | `POST` | `/admin/sync/csv`     | Importar catálogo desde CSV                   |
 | `POST` | `/admin/sync/excel`   | Importar catálogo desde Excel                 |
+| `POST` | `/admin/sync/ecommerce`| Sincronizar catálogo desde ecommerce         |
 | `GET`  | `/admin/catalog/stats`| Estadísticas del catálogo                     |
 
 ---
@@ -190,6 +238,7 @@ Suites incluidas:
 - `PricingToolsTests` — precio por código, descripción, oferta, no encontrado
 - `AlternativeSearchTests` — criterios de sustitución
 - `OdooConnectorTests` — happy path, errores de autenticación, upsert, nulables, JSON-RPC
+- `EcommerceInventoryConnectorTests` — success, pagination, not-found, auth error, malformed JSON, lead-time normalization, hybrid availability fallback
 
 ---
 

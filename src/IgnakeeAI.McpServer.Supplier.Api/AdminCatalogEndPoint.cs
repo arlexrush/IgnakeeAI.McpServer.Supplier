@@ -1,7 +1,9 @@
 ﻿using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
 using IgnakeeAI.McpServer.Supplier.Application.Contracts;
+using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace IgnakeeAI.McpServer.Supplier.Api
@@ -179,6 +181,126 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     .Take(100)
                     .ToListAsync(cancellationToken)))
                 .WithTags("Admin");
+
+            /// <summary>
+            /// POST /admin/sync/ecommerce
+            /// Sincroniza el catálogo local con la API de inventario del ecommerce.
+            /// Requiere que EcommerceInventory:Enabled = true en la configuración.
+            /// Pagina por el catálogo activo y realiza upsert por ItemCode/ProductCode.
+            /// Devuelve un resumen de la sincronización con el número de productos importados.
+            /// Protegido con SupplierAdminPolicy (requiere API key de administrador).
+            /// </summary>
+            admin.MapPost("/sync/ecommerce", async (
+                IEcommerceInventoryClient ecommerce,
+                SupplierCatalogDbContext db,
+                CatalogSyncAuditWriter auditWriter,
+                IConfiguration config,
+                CancellationToken cancellationToken) =>
+            {
+                if (!ecommerce.IsEnabled)
+                    return Results.BadRequest(new
+                    {
+                        error = "La integración con el ecommerce no está habilitada. " +
+                                "Configura EcommerceInventory:Enabled = true y EcommerceInventory:BaseUrl."
+                    });
+
+                var startedAt = DateTimeOffset.UtcNow;
+                var pageSize = config.GetValue<int>("EcommerceInventory:SyncPageSize", 100);
+                if (pageSize <= 0) pageSize = 100;
+
+                var totalImported = 0;
+                var totalUpserted = 0;
+                var totalSkipped = 0;
+
+                try
+                {
+                    var page = 1;
+                    while (true)
+                    {
+                        var products = await ecommerce.GetCatalogPageAsync(page, pageSize, cancellationToken);
+                        if (products.Count == 0) break;
+
+                        foreach (var product in products)
+                        {
+                            totalImported++;
+                            try
+                            {
+                                var existing = await db.Products
+                                    .FirstOrDefaultAsync(p => p.ItemCode == product.ItemCode, cancellationToken);
+
+                                if (existing is null)
+                                {
+                                    db.Products.Add(product);
+                                }
+                                else
+                                {
+                                    existing.Description = product.Description;
+                                    existing.Category = product.Category;
+                                    existing.UnitPrice = product.UnitPrice;
+                                    existing.Currency = product.Currency;
+                                    existing.Unit = product.Unit;
+                                    existing.AvailableStock = product.AvailableStock;
+                                    existing.LeadTimeDays = product.LeadTimeDays;
+                                    existing.IsActive = product.IsActive;
+                                    existing.UpdatedAt = product.UpdatedAt;
+                                }
+                                totalUpserted++;
+                            }
+                            catch (Exception ex) when (ex is not OperationCanceledException)
+                            {
+                                totalSkipped++;
+                            }
+                        }
+
+                        await db.SaveChangesAsync(cancellationToken);
+
+                        if (products.Count < pageSize) break;
+                        page++;
+                    }
+
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Ecommerce,
+                        "EcommerceInventory",
+                        totalImported,
+                        totalUpserted,
+                        0,
+                        totalSkipped,
+                        startedAt,
+                        true,
+                        cancellationToken: cancellationToken);
+
+                    return Results.Ok(new
+                    {
+                        source = "ecommerce",
+                        productsImported = totalImported,
+                        productsUpserted = totalUpserted,
+                        productsSkipped = totalSkipped,
+                        syncedAt = DateTime.UtcNow
+                    });
+                }
+                catch (EcommerceAuthException ex)
+                {
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Ecommerce, "EcommerceInventory",
+                        totalImported, totalUpserted, 0, totalSkipped,
+                        startedAt, false, "EcommerceAuthException", cancellationToken);
+                    return Results.Problem(
+                        detail: ex.Message,
+                        statusCode: 502,
+                        title: "Error de autenticación con el ecommerce");
+                }
+                catch (Exception ex) when (ex is EcommerceCommunicationException or EcommerceMappingException)
+                {
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Ecommerce, "EcommerceInventory",
+                        totalImported, totalUpserted, 0, totalSkipped,
+                        startedAt, false, ex.GetType().Name, cancellationToken);
+                    return Results.Problem(
+                        detail: ex.Message,
+                        statusCode: 502,
+                        title: "Error al sincronizar catálogo ecommerce");
+                }
+            }).WithTags("Admin");
 
             return admin;
         }

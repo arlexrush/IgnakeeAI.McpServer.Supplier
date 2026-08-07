@@ -4,6 +4,7 @@ using IgnakeeAI.McpServer.Supplier.Application.Services;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore; // Agrega esta directiva using para habilitar UseSqlServer, UseSqlite, UseNpgsql, UseMySql
@@ -101,7 +102,35 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure
             {
                 services.Configure<DataSourceSettings>(configuration.GetSection("Erp:Sap"));
                 services.AddHttpClient<IErpConnector, SapConnector>();
-            }                        
+            }
+
+            // ── Conector de inventario Ecommerce (opcional, según configuración) ───
+            services.Configure<EcommerceInventoryOptions>(
+                configuration.GetSection(EcommerceInventoryOptions.SectionName));
+
+            var ecommerceEnabled = configuration.GetValue<bool>(
+                $"{EcommerceInventoryOptions.SectionName}:Enabled");
+            if (ecommerceEnabled)
+            {
+                var timeoutSeconds = configuration.GetValue<int>(
+                    $"{EcommerceInventoryOptions.SectionName}:TimeoutSeconds", 10);
+
+                services.AddHttpClient<IEcommerceInventoryClient, EcommerceInventoryConnector>(client =>
+                {
+                    var baseUrl = configuration[$"{EcommerceInventoryOptions.SectionName}:BaseUrl"];
+                    if (!string.IsNullOrWhiteSpace(baseUrl) &&
+                        Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri))
+                    {
+                        client.BaseAddress = baseUri;
+                    }
+                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds > 0 ? timeoutSeconds : 10);
+                });
+            }
+            else
+            {
+                // Registrar un cliente deshabilitado para que la inyección opcional funcione
+                services.AddSingleton<IEcommerceInventoryClient, DisabledEcommerceInventoryClient>();
+            }
 
             return services;
         }
