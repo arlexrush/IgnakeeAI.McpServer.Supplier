@@ -241,6 +241,18 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
             Assert.Contains("No hay conector ERP configurado", doc.RootElement.GetProperty("error").GetString());
         }
 
+        [Fact]
+        public async Task POST_AdminSyncEcommerce_WithIntegrationDisabled_Returns400()
+        {
+            var ct = TestContext.Current.CancellationToken;
+            var response = await _client.PostAsync("/admin/sync/ecommerce", null, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(body);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("EcommerceInventory", doc.RootElement.GetProperty("error").GetString());
+        }
+
         // ── GET /admin/catalog/stats ──────────────────────────────────────────────
 
         [Fact]

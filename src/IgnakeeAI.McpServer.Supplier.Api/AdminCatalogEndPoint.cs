@@ -2,6 +2,7 @@
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
 using IgnakeeAI.McpServer.Supplier.Application.Contracts;
+using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace IgnakeeAI.McpServer.Supplier.Api
@@ -67,6 +68,71 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                         ex.GetType().Name,
                         cancellationToken);
                     throw;
+                }
+            }).WithTags("Admin");
+
+            admin.MapPost("/sync/ecommerce", async (
+                IEcommerceInventoryService ecommerceInventory,
+                CatalogSyncAuditWriter auditWriter,
+                CancellationToken cancellationToken) =>
+            {
+                if (!ecommerceInventory.IsEnabled)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "La integración EcommerceInventory no está habilitada. Revisa la sección EcommerceInventory en la configuración."
+                    });
+                }
+
+                var startedAt = DateTimeOffset.UtcNow;
+
+                try
+                {
+                    var result = await ecommerceInventory.SyncCatalogAsync(cancellationToken);
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Ecommerce,
+                        "ecommerce",
+                        result.ProductsRead,
+                        result.ProductsCreated,
+                        result.ProductsUpdated,
+                        result.ProductsRejected,
+                        startedAt,
+                        true,
+                        cancellationToken: cancellationToken);
+
+                    return Results.Ok(new
+                    {
+                        source = CatalogSyncAuditSources.Ecommerce,
+                        result.ProductsRead,
+                        result.ProductsCreated,
+                        result.ProductsUpdated,
+                        result.ProductsRejected,
+                        syncedAt = DateTimeOffset.UtcNow
+                    });
+                }
+                catch (EcommerceInventoryException ex)
+                {
+                    await auditWriter.WriteAsync(
+                        CatalogSyncAuditSources.Ecommerce,
+                        "ecommerce",
+                        0,
+                        0,
+                        0,
+                        0,
+                        startedAt,
+                        false,
+                        ex.Kind.ToString(),
+                        cancellationToken);
+
+                    var statusCode = ex.Kind switch
+                    {
+                        EcommerceInventoryFailureKind.Timeout => StatusCodes.Status504GatewayTimeout,
+                        EcommerceInventoryFailureKind.Authentication => StatusCodes.Status502BadGateway,
+                        EcommerceInventoryFailureKind.InvalidResponse => StatusCodes.Status502BadGateway,
+                        _ => StatusCodes.Status502BadGateway
+                    };
+
+                    return Results.Json(new { error = ex.Message }, statusCode: statusCode);
                 }
             }).WithTags("Admin");
 

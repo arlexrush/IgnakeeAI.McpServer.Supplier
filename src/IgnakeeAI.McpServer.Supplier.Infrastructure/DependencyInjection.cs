@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore; // Agrega esta directiva using para habilit
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Net.Http.Headers;
 
 namespace IgnakeeAI.McpServer.Supplier.Infrastructure
 {
@@ -82,12 +83,46 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure
                 "Supplier:Location requiere coordenadas válidas juntas; IsValidated=true también requiere coordenadas.")
                 .ValidateOnStart();
 
+            services.AddOptions<EcommerceInventoryOptions>()
+                .Bind(configuration.GetSection(EcommerceInventoryOptions.SectionName))
+                .Validate(options =>
+                    !options.Enabled ||
+                    (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _) &&
+                     !string.IsNullOrWhiteSpace(options.AuthenticationHeaderName) &&
+                     !string.IsNullOrWhiteSpace(options.AuthenticationHeaderValue) &&
+                     options.RequestTimeoutSeconds > 0 &&
+                     options.CatalogSyncPageSize > 0 &&
+                     options.ProductLookupPathTemplate.Contains("{productCode}", StringComparison.Ordinal) &&
+                     options.CatalogSyncPathTemplate.Contains("{page}", StringComparison.Ordinal) &&
+                     options.CatalogSyncPathTemplate.Contains("{pageSize}", StringComparison.Ordinal)),
+                    "EcommerceInventory requiere BaseUrl absoluta, cabecera de autenticación, timeout positivo y plantillas de ruta válidas cuando está habilitado.")
+                .ValidateOnStart();
+
             // ── Servicio de aplicación ───────────────────────────────────────────────
             services.AddScoped<CatalogSearchService>();
 
             // ── Conectores de importación (opcionales) ──────────────────────────────
             services.AddScoped<ExcelCatalogConnector>();
             services.AddScoped<CsvCatalogConnector>();
+
+            var ecommerceOptions = configuration
+                .GetSection(EcommerceInventoryOptions.SectionName)
+                .Get<EcommerceInventoryOptions>() ?? new EcommerceInventoryOptions();
+
+            if (ecommerceOptions.Enabled)
+            {
+                services.AddHttpClient<IEcommerceInventoryService, EcommerceInventoryConnector>((sp, httpClient) =>
+                {
+                    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<EcommerceInventoryOptions>>().Value;
+                    httpClient.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                });
+            }
+            else
+            {
+                services.AddSingleton<IEcommerceInventoryService, DisabledEcommerceInventoryService>();
+            }
 
             // ── Conectores ERP (opcionales, según configuración) ────────────────────
             // Asegúrate de registrar el HttpClientFactory  

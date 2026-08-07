@@ -1,4 +1,5 @@
 using IgnakeeAI.McpServer.Supplier.Application.Services;
+using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence.Repositories;
@@ -53,12 +54,82 @@ public sealed class AvailabilityToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckAvailability_WithEnabledEcommerceInventory_UsesLiveAvailability()
+    {
+        var result = await CreateTools(new FakeEcommerceInventoryService(
+            enabled: true,
+            product: new CatalogProduct
+            {
+                ItemCode = "CEM-001",
+                Description = "Cemento 25kg",
+                Category = "cementos",
+                Unit = "saco",
+                UnitPrice = 5.90m,
+                Currency = "EUR",
+                AvailableStock = 3,
+                LeadTimeDays = 4,
+                IsActive = true
+            })).CheckAvailability("CEM-001");
+
+        using var json = JsonDocument.Parse(result);
+        var root = json.RootElement;
+
+        Assert.True(root.GetProperty("found").GetBoolean());
+        Assert.Equal(3, root.GetProperty("availableStock").GetDecimal());
+        Assert.Equal(4, root.GetProperty("leadTimeDays").GetInt32());
+    }
+
+    [Fact]
+    public async Task CheckAvailability_WhenEcommerceInventoryFails_FallsBackToLocalCatalog()
+    {
+        var result = await CreateTools(new FakeEcommerceInventoryService(
+            enabled: true,
+            exception: new Application.Contracts.EcommerceInventoryException(
+                Application.Contracts.EcommerceInventoryFailureKind.Technical,
+                "upstream failed"))).CheckAvailability("CEM-001");
+
+        using var json = JsonDocument.Parse(result);
+        var root = json.RootElement;
+
+        Assert.True(root.GetProperty("found").GetBoolean());
+        Assert.Equal(120, root.GetProperty("availableStock").GetDecimal());
+        Assert.Equal(1, root.GetProperty("leadTimeDays").GetInt32());
+    }
+
+    [Fact]
     public async Task CheckAvailability_EmptyCode_ThrowsValidationError() =>
         await Assert.ThrowsAsync<ArgumentException>(() => CreateTools().CheckAvailability(" "));
 
     public void Dispose() => _db.Dispose();
 
-    private AvailabilityTools CreateTools() => new(
+    private AvailabilityTools CreateTools(IEcommerceInventoryService? ecommerceInventory = null) => new(
         new CatalogSearchService(new EfCatalogRepository(_db), new TestSupplierConfig()),
-        new TestSupplierConfig());
+        new TestSupplierConfig(),
+        ecommerceInventory);
+
+    private sealed class FakeEcommerceInventoryService : IEcommerceInventoryService
+    {
+        private readonly CatalogProduct? _product;
+        private readonly Exception? _exception;
+
+        public FakeEcommerceInventoryService(bool enabled, CatalogProduct? product = null, Exception? exception = null)
+        {
+            IsEnabled = enabled;
+            _product = product;
+            _exception = exception;
+        }
+
+        public bool IsEnabled { get; }
+
+        public Task<CatalogProduct?> FindByCodeAsync(string itemCode, CancellationToken ct = default)
+        {
+            if (_exception is not null)
+                throw _exception;
+
+            return Task.FromResult(_product);
+        }
+
+        public Task<Application.Contracts.EcommerceInventorySyncResult> SyncCatalogAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+    }
 }

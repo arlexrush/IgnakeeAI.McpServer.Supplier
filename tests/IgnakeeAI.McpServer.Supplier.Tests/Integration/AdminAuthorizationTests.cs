@@ -20,6 +20,15 @@ public sealed class AdminAuthorizationTests : IClassFixture<SupplierApiFactory>
     }
 
     [Fact]
+    public async Task McpClientKey_OnEcommerceSyncEndpoint_Returns403()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", "mcp-test-key");
+        var response = await client.PostAsync("/admin/sync/ecommerce", JsonContent.Create(new { }));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task AdminKey_OnMcpEndpoint_Returns403()
     {
         using var client = _factory.CreateClient();

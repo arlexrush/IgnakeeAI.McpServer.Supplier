@@ -36,7 +36,7 @@ Permite que agentes LLM o clientes MCP consulten en tiempo real:
 - alternativas y sustitutos,
 - horarios y datos de contacto del proveedor.
 
-El catálogo se alimenta desde múltiples fuentes: base de datos local (EF Core), archivos CSV/Excel y sincronización con ERP (Odoo o SAP).
+El catálogo se alimenta desde múltiples fuentes: base de datos local (EF Core), archivos CSV/Excel, sincronización con ERP (Odoo o SAP) y un conector HTTP de inventario ecommerce.
 
 ---
 
@@ -138,6 +138,10 @@ Copia `.env.example` a `.env` y ajusta los valores necesarios.
 | `SUPPLIER_CONTACT_ADDRESS`   | Dirección                                                    | —                                                |
 | `SUPPLIER_BUSINESS_HOURS`    | Horario de atención                                          | —                                                |
 | `Erp__Provider`              | ERP activo: `odoo`, `sap` o vacío                            | vacío                                            |
+| `EcommerceInventory__Enabled`| Activa el conector HTTP de inventario ecommerce              | `false`                                          |
+| `EcommerceInventory__BaseUrl`| URL base del API REST de inventario ecommerce                | `https://ecommerce.example.com`                  |
+| `EcommerceInventory__AuthenticationHeaderName` | Cabecera de autenticación upstream          | `X-Api-Key`                                      |
+| `EcommerceInventory__AuthenticationHeaderValue`| Valor secreto de la cabecera upstream        | —                                                |
 
 Las migraciones de base de datos se aplican automáticamente al arrancar (`ApplyMigrationsOnStartup: true`).
 
@@ -165,6 +169,39 @@ curl -X POST http://localhost:5100/admin/sync/excel -F "file=@catalogo.xlsx"
 
 Hoja `Catalogo` (o primera hoja), columnas A–Q.
 
+### Ecommerce inventory (REST autenticado)
+
+No consumas el `/api/mcp` del ecommerce. Configura la sección `EcommerceInventory` para usar su API REST de inventario de solo lectura:
+
+- `ProductLookupPathTemplate`: lookup por `productCode`
+- `CatalogSyncPathTemplate`: catálogo paginado de productos activos
+- `AuthenticationHeaderName` / `AuthenticationHeaderValue`: autenticación service-to-service
+
+Comportamiento implementado:
+
+- `POST /admin/sync/ecommerce` sincroniza el catálogo local por `ItemCode`/`productCode`
+- `getPrice` y búsquedas amplias siguen usando el catálogo local
+- `checkAvailability` consulta el endpoint ecommerce en vivo cuando la integración está habilitada; si el upstream falla técnicamente o por autenticación, hace fallback al catálogo local
+
+Mapeo principal a `CatalogProduct`:
+
+| Ecommerce | Local |
+|-----------|-------|
+| `productCode` | `ItemCode` |
+| `description` / `productName` | `Description` |
+| `category` | `Category` |
+| `price` | `UnitPrice` |
+| `currency` | `Currency` |
+| `stock` | `AvailableStock` |
+| `unitToSell` | `Unit` |
+| `purchaseLeadTime` + `purchaseLeadTimeUnit` | `LeadTimeDays` |
+| `status` | `IsActive` |
+
+Asunciones por defecto sobre paths versionados (ajustables por configuración):
+
+- producto por código: `/api/inventory/v1/products/{productCode}`
+- catálogo activo paginado: `/api/inventory/v1/products/active?page={page}&pageSize={pageSize}`
+
 Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 
 ---
@@ -177,6 +214,7 @@ Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 | `GET`  | `/`                   | Metadata del servidor y tools declaradas      |
 | `POST` | `/mcp`                | Endpoint MCP (HTTP transport)                 |
 | `POST` | `/admin/sync/erp`     | Sincronizar catálogo desde ERP                |
+| `POST` | `/admin/sync/ecommerce` | Sincronizar catálogo desde inventario ecommerce |
 | `POST` | `/admin/sync/csv`     | Importar catálogo desde CSV                   |
 | `POST` | `/admin/sync/excel`   | Importar catálogo desde Excel                 |
 | `GET`  | `/admin/catalog/stats`| Estadísticas del catálogo                     |
@@ -188,8 +226,17 @@ Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 Suites incluidas:
 
 - `PricingToolsTests` — precio por código, descripción, oferta, no encontrado
+- `AvailabilityToolsTests` — disponibilidad local y fallback con ecommerce
 - `AlternativeSearchTests` — criterios de sustitución
 - `OdooConnectorTests` — happy path, errores de autenticación, upsert, nulables, JSON-RPC
+- `EcommerceInventoryConnectorTests` — HTTP autenticado, paginación, rechazo de datos inválidos, timeout y errores upstream
+
+### Desarrollo local de la integración ecommerce
+
+1. Copia `.env.example` a `.env`.
+2. Configura `EcommerceInventory__Enabled=true` y un secreto local para `EcommerceInventory__AuthenticationHeaderValue`.
+3. Ajusta las plantillas de paths si el backend ecommerce publica rutas distintas a las asumidas arriba.
+4. Ejecuta `dotnet test` para validar el conector con handlers HTTP simulados.
 
 ---
 
@@ -231,5 +278,4 @@ Guía completa: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 Este proyecto está licenciado bajo la [Apache License 2.0](LICENSE.txt).  
 Copyright 2026 IgnakeeAI.
-
 
