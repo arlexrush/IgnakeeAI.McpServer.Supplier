@@ -15,11 +15,14 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
     {
         private readonly ICatalogRepository _catalog;
         private readonly ISupplierConfig _supplierConfig;
+        private readonly IEcommerceInventoryClient? _ecommerce;
 
-        public CatalogSearchService(ICatalogRepository catalog, ISupplierConfig supplierConfig)
+        public CatalogSearchService(ICatalogRepository catalog, ISupplierConfig supplierConfig,
+            IEcommerceInventoryClient? ecommerce = null)
         {
             _catalog = catalog;
             _supplierConfig = supplierConfig;
+            _ecommerce = ecommerce;
         }
 
         /// <summary>Busca un producto por código o descripción y devuelve el resultado de precio.</summary>
@@ -103,11 +106,41 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
             };
         }
 
-        /// <summary>Consulta disponibilidad por código.</summary>
+        /// <summary>
+        /// Consulta disponibilidad por código.
+        /// Comportamiento híbrido:
+        ///   1. Si el conector ecommerce está habilitado, consulta disponibilidad en tiempo real.
+        ///   2. Si el ecommerce no está disponible o no encuentra el producto, cae en el catálogo local.
+        /// </summary>
         public async Task<AvailabilityResult> CheckAvailabilityAsync(string itemCode, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(itemCode))
                 throw new ArgumentException("itemCode es obligatorio.", nameof(itemCode));
+
+            // Consulta en tiempo real al ecommerce cuando está habilitado
+            if (_ecommerce is { IsEnabled: true })
+            {
+                try
+                {
+                    var liveProduct = await _ecommerce.GetProductByCodeAsync(itemCode, ct);
+                    if (liveProduct is not null)
+                    {
+                        return new AvailabilityResult
+                        {
+                            Found = true,
+                            ItemCode = liveProduct.ItemCode,
+                            AvailableStock = Math.Max(0, (decimal)(liveProduct.AvailableStock ?? 0)),
+                            LeadTimeDays = Math.Max(0, liveProduct.LeadTimeDays ?? 0),
+                            Message = (liveProduct.AvailableStock ?? 0) > 0 ? "Disponible" : "Sin stock"
+                        };
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Fallo técnico del ecommerce: caer en catálogo local sin romper el tool
+                }
+            }
+
             var product = await _catalog.FindByCodeAsync(itemCode, ct);
             if (product is null)
             {
@@ -118,7 +151,7 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
             {
                 Found = true,
                 ItemCode = product.ItemCode,
-                AvailableStock = Math.Max(0, product.AvailableStock ?? 0),
+                AvailableStock = Math.Max(0, (decimal)(product.AvailableStock ?? 0)),
                 LeadTimeDays = Math.Max(0, product.LeadTimeDays ?? 0),
                 Message = (product.AvailableStock ?? 0) > 0 ? "Disponible" : "Sin stock"
             };

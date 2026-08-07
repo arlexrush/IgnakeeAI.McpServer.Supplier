@@ -6,9 +6,10 @@ public static class CatalogSyncAuditSources
     public const string Csv = "csv";
     public const string Excel = "excel";
     public const string Manual = "manual";
+    public const string Ecommerce = "ecommerce";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
     {
-        Erp, Csv, Excel, Manual
+        Erp, Csv, Excel, Manual, Ecommerce
     };
 }
