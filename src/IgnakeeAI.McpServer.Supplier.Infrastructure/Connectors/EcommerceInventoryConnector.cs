@@ -51,7 +51,7 @@ public sealed class EcommerceInventoryConnector : IEcommerceInventoryService
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;
 
-        await EnsureSuccessfulResponseAsync(response, ct);
+        await EnsureSuccessfulResponseAsync(response);
 
         using var document = await ReadDocumentAsync(response, ct);
         var payload = ExtractSingleProduct(document.RootElement);
@@ -77,7 +77,7 @@ public sealed class EcommerceInventoryConnector : IEcommerceInventoryService
                 .Replace("{pageSize}", _options.CatalogSyncPageSize.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
 
             using var response = await SendAsync(path, ct);
-            await EnsureSuccessfulResponseAsync(response, ct);
+            await EnsureSuccessfulResponseAsync(response);
 
             using var document = await ReadDocumentAsync(response, ct);
             var items = ExtractCatalogItems(document.RootElement);
@@ -125,7 +125,7 @@ public sealed class EcommerceInventoryConnector : IEcommerceInventoryService
 
     private async Task<HttpResponseMessage> SendAsync(string relativePath, CancellationToken ct)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, relativePath);
+        var request = new HttpRequestMessage(HttpMethod.Get, relativePath);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.TryAddWithoutValidation(
             _options.AuthenticationHeaderName,
@@ -173,10 +173,10 @@ public sealed class EcommerceInventoryConnector : IEcommerceInventoryService
         }
     }
 
-    private static async Task EnsureSuccessfulResponseAsync(HttpResponseMessage response, CancellationToken ct)
+    private static Task EnsureSuccessfulResponseAsync(HttpResponseMessage response)
     {
         if (response.IsSuccessStatusCode)
-            return;
+            return Task.CompletedTask;
 
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {

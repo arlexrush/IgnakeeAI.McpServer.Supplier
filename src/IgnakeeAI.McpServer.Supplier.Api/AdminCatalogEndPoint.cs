@@ -124,13 +124,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                         ex.Kind.ToString(),
                         cancellationToken);
 
-                    var statusCode = ex.Kind switch
-                    {
-                        EcommerceInventoryFailureKind.Timeout => StatusCodes.Status504GatewayTimeout,
-                        EcommerceInventoryFailureKind.Authentication => StatusCodes.Status502BadGateway,
-                        EcommerceInventoryFailureKind.InvalidResponse => StatusCodes.Status502BadGateway,
-                        _ => StatusCodes.Status502BadGateway
-                    };
+                    var statusCode = ex.Kind == EcommerceInventoryFailureKind.Timeout
+                        ? StatusCodes.Status504GatewayTimeout
+                        : StatusCodes.Status502BadGateway;
 
                     return Results.Json(new { error = ex.Message }, statusCode: statusCode);
                 }
