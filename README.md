@@ -169,22 +169,32 @@ Hoja `Catalogo` (o primera hoja), columnas A–Q.
 
 El conector de inventario ecommerce conecta con la API REST de inventario de `IgnakeeEcommerce-BackEnd`.
 
+**Contrato del endpoint del ecommerce:**
+
+| Operación | Método | Ruta |
+|-----------|--------|------|
+| Producto individual | `GET` | `/api/v1/inventory/{productCode}` |
+| Catálogo paginado (PaginationVm) | `GET` | `/api/v1/inventory?pageIndex={n}&pageSize={n}` |
+
+Autenticación: `Authorization: Bearer <JWT>`. La identidad técnica debe tener el rol `INVENTORY_READER` (o `ADMIN` para break-glass).
+
+La respuesta del catálogo usa la semántica `PaginationVm<T>`: `data[]`, `count`, `pageIndex`, `pageSize`, `pageCount`, `resultByPage`.
+
 **Habilitar la integración** (`appsettings.json` o variables de entorno):
 
 ```json
 "EcommerceInventory": {
   "Enabled": true,
   "BaseUrl": "https://ecommerce.example.com",
-  "ApiKeyHeaderName": "X-Api-Key",
-  "ApiKeyValue": "",
+  "BearerToken": "",
   "TimeoutSeconds": 10,
-  "ProductLookupPath": "/api/inventory/products/{productCode}",
-  "CatalogSyncPath": "/api/inventory/products",
+  "ProductLookupPath": "/api/v1/inventory/{productCode}",
+  "CatalogSyncPath": "/api/v1/inventory",
   "SyncPageSize": 100
 }
 ```
 
-> **Seguridad:** nunca confirmes `ApiKeyValue` en el repositorio. Usa la variable de entorno `EcommerceInventory__ApiKeyValue` o un secret manager.
+> **Seguridad:** nunca confirmes `BearerToken` en el repositorio. Inyecta el token mediante la variable de entorno `EcommerceInventory__BearerToken` o un secret manager.
 
 **Sincronización manual del catálogo:**
 
@@ -193,7 +203,7 @@ curl -X POST http://localhost:5100/admin/sync/ecommerce \
   -H "X-Admin-Key: <admin-key>"
 ```
 
-Pagina por el catálogo activo del ecommerce y realiza upsert por `ItemCode`/`ProductCode`.
+Pagina por el catálogo activo del ecommerce (usando `pageIndex` y `pageSize`) y realiza upsert por `ItemCode`/`ProductCode`.
 
 **Disponibilidad en tiempo real (`CheckAvailability`):**
 Cuando `Enabled = true`, `checkAvailability` consulta el ecommerce en tiempo real antes de caer al catálogo local. Si el ecommerce falla o no responde, la operación continúa con el catálogo local sin romper el contrato MCP.
@@ -238,7 +248,7 @@ Suites incluidas:
 - `PricingToolsTests` — precio por código, descripción, oferta, no encontrado
 - `AlternativeSearchTests` — criterios de sustitución
 - `OdooConnectorTests` — happy path, errores de autenticación, upsert, nulables, JSON-RPC
-- `EcommerceInventoryConnectorTests` — success, pagination, not-found, auth error, malformed JSON, lead-time normalization, hybrid availability fallback
+- `EcommerceInventoryConnectorTests` — bearer auth header, nullable price, `data` envelope, `pageIndex` URL param, not-found, 401/403 auth errors, malformed JSON, lead-time normalization, isAvailableForSale mapping, cancellation propagation, hybrid availability fallback
 
 ---
 

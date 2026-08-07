@@ -7,25 +7,34 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration
     ///   "EcommerceInventory": {
     ///     "Enabled": true,
     ///     "BaseUrl": "https://ecommerce.example.com",
-    ///     "ApiKeyHeaderName": "X-Api-Key",
-    ///     "ApiKeyValue": "",                   ← inyectar mediante variable de entorno / secret
+    ///     "BearerToken": "",               ← inyectar mediante variable de entorno EcommerceInventory__BearerToken
     ///     "TimeoutSeconds": 10,
-    ///     "ProductLookupPath": "/api/inventory/products/{productCode}",
-    ///     "CatalogSyncPath": "/api/inventory/products",
+    ///     "ProductLookupPath": "/api/v1/inventory/{productCode}",
+    ///     "CatalogSyncPath": "/api/v1/inventory",
     ///     "SyncPageSize": 100
     ///   }
     ///
+    /// AUTENTICACIÓN:
+    ///   La identidad técnica debe tener el rol INVENTORY_READER (o ADMIN para break-glass).
+    ///   El token se envía en el encabezado: Authorization: ******;token&gt;
+    ///   No confirmar el valor en el repositorio; inyectarlo desde variable de entorno o secret manager.
+    ///
     /// CAMPO MAPPING (ecommerce → CatalogProduct):
-    ///   productCode       → ItemCode
-    ///   productName       → Description (cuando description está vacío)
-    ///   description       → Description
-    ///   category          → Category
-    ///   price             → UnitPrice
-    ///   currency          → Currency
-    ///   stock             → AvailableStock
-    ///   unitToSell        → Unit
-    ///   purchaseLeadTime  → LeadTimeDays  (normalizado a días según purchaseLeadTimeUnit)
-    ///   status            → IsActive  (active → true, cualquier otro → false)
+    ///   productCode          → ItemCode
+    ///   productId            → (almacenado como referencia; int? en el DTO)
+    ///   productName          → Description (cuando description está vacío)
+    ///   description          → Description
+    ///   category             → Category
+    ///   price                → UnitPrice  (decimal? — null tolerado; se guarda como null/0)
+    ///   currency             → Currency
+    ///   isAvailableForSale   → IsActive  (conjuntamente con status)
+    ///   stock                → AvailableStock
+    ///   unitToSell           → Unit
+    ///   purchaseLeadTime     → LeadTimeDays  (normalizado a días según purchaseLeadTimeUnit)
+    ///   status "Active"      → IsActive = true  (junto con isAvailableForSale)
+    ///
+    /// PAGINACIÓN (PaginationVm):
+    ///   Campos de respuesta: data[], count, pageIndex, pageSize, pageCount, resultByPage
     /// </summary>
     public sealed class EcommerceInventoryOptions
     {
@@ -37,14 +46,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration
         /// <summary>URL base de la API del ecommerce, sin barra final.</summary>
         public string BaseUrl { get; set; } = string.Empty;
 
-        /// <summary>Nombre del encabezado HTTP para la clave API.</summary>
-        public string ApiKeyHeaderName { get; set; } = "X-Api-Key";
-
         /// <summary>
-        /// Valor de la clave API. No confirmar credenciales reales;
-        /// inyectar mediante variable de entorno EcommerceInventory__ApiKeyValue.
+        /// Token Bearer para autenticación service-to-service.
+        /// La identidad técnica debe tener el rol INVENTORY_READER.
+        /// No confirmar en el repositorio; inyectar mediante EcommerceInventory__BearerToken.
         /// </summary>
-        public string ApiKeyValue { get; set; } = string.Empty;
+        public string BearerToken { get; set; } = string.Empty;
 
         /// <summary>Tiempo máximo de espera por petición HTTP, en segundos.</summary>
         public int TimeoutSeconds { get; set; } = 10;
@@ -53,10 +60,10 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration
         /// Ruta de consulta individual de producto. El placeholder {productCode}
         /// será reemplazado por el código del producto.
         /// </summary>
-        public string ProductLookupPath { get; set; } = "/api/inventory/products/{productCode}";
+        public string ProductLookupPath { get; set; } = "/api/v1/inventory/{productCode}";
 
         /// <summary>Ruta del endpoint de catálogo para sincronización paginada.</summary>
-        public string CatalogSyncPath { get; set; } = "/api/inventory/products";
+        public string CatalogSyncPath { get; set; } = "/api/v1/inventory";
 
         /// <summary>Tamaño de página en la sincronización del catálogo.</summary>
         public int SyncPageSize { get; set; } = 100;
