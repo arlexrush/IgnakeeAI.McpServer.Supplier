@@ -2,7 +2,9 @@
 
 ## 1. Propósito del sistema
 
-`IgnakeeAI.McpServer.Supplier` es un servidor MCP (Model Context Protocol) orientado a catálogo de proveedor para construcción, diseñado para:
+`IgnakeeAI.McpServer.Supplier` es el servicio que un proveedor despliega para que los agentes de Legio consulten su catálogo mediante MCP. El proveedor conserva el control de sus datos, ERP y credenciales; Legio accede únicamente a la interfaz MCP autorizada.
+
+Está diseñado para:
 
 - Exponer herramientas MCP para:
   - consulta de precio (`GetPrice`)
@@ -14,7 +16,10 @@
   - importación por `CSV`
   - importación por `Excel`
   - sincronización desde ERP (`Odoo` o `SAP`)
-- Ofrecer una integración simple por HTTP (`/mcp`) con salud del servicio (`/health`).
+- Ofrecer una integración HTTP segura (`/mcp`) con salud del servicio (`/health`).
+
+La frontera de confianza es explícita: Legio usa una credencial MCP con scopes de lectura y
+el proveedor usa una credencial administrativa separada para sincronizar el catálogo.
 
 ---
 
@@ -301,6 +306,151 @@ Consumidas por `SupplierConfig`:
 - `SUPPLIER_VENDOR_NAME`
 - `SUPPLIER_BUSINESS_HOURS`
 
+## 9.3 Frontera de integración con Legio
+
+La configuración de producción separa dos identidades:
+
+- `ADMIN_API_KEY`: solo para operaciones del proveedor en `/admin/*`.
+- `MCP_CLIENT_ID` y `MCP_API_KEY`: identidad que Legio utiliza para `/mcp`.
+
+El Compose traduce estas variables a la configuración interna `Admin:ApiKey` y
+`Mcp:Clients:0`. Legio recibe únicamente la URL HTTPS de `/mcp`, su identificador,
+su clave MCP y los scopes `catalog.read` y `availability.read`. La base de datos,
+los conectores ERP y los endpoints administrativos permanecen dentro de la
+infraestructura del proveedor.
+
+## 9.4 Modelo de despliegue por proveedor
+
+El modelo operativo es **una instancia independiente por proveedor**. Cada
+proveedor despliega su propia copia del servidor, configura su fuente de datos y
+publica un endpoint MCP propio. No existe una base de datos de catalogo
+compartida entre proveedores.
+
+El proveedor puede obtener el software de dos formas:
+
+1. **Codigo fuente desde GitHub**: descarga el repositorio, configura sus
+   credenciales y construye la aplicacion o la imagen Docker.
+2. **Imagen Docker publicada**: utiliza una imagen asociada a una version
+   etiquetada del proyecto. Esta opcion es preferible para produccion porque
+   hace reproducible el despliegue y evita depender directamente de una rama de
+   desarrollo.
+
+En ambos casos, el proveedor es responsable de seleccionar y administrar su
+infraestructura: Azure, AWS, Google Cloud, un VPS, Kubernetes o un servidor
+local con conectividad HTTPS. La aplicacion no obliga a utilizar un proveedor
+cloud concreto.
+
+### Responsabilidades del proveedor
+
+El proveedor debe:
+
+- configurar la conexion con su ERP o preparar los ficheros CSV/Excel;
+- proporcionar la base de datos y su almacenamiento persistente;
+- definir sus datos comerciales, contacto, horarios y ubicacion;
+- custodiar las credenciales del ERP y las claves `ADMIN_API_KEY` y
+  `MCP_API_KEY`;
+- ejecutar la sincronizacion del catalogo mediante los endpoints administrativos
+  o un proceso programado;
+- proteger el acceso publico con HTTPS, firewall, proxy inverso y, cuando sea
+  necesario, limitacion de trafico;
+- entregar a Legio unicamente la URL MCP, el identificador de cliente y la
+  credencial MCP con los scopes autorizados.
+
+Las credenciales del ERP, la base de datos, los endpoints `/admin/*` y la
+infraestructura interna no se entregan a Legio. Legio solo consume el contrato
+MCP publicado por el proveedor.
+
+### Aislamiento de datos
+
+Cada instalacion tiene su propia configuracion y su propio catalogo local:
+
+```text
+Proveedor A                         Proveedor B
+-------------                       -------------
+ERP A -> Catalogo A -> /mcp         ERP B -> Catalogo B -> /mcp
+          |                                   |
+          +--> Legio consulta A              +--> Legio consulta B
+```
+
+Una consulta MCP no accede directamente al ERP. El flujo normal es:
+
+1. el proveedor sincroniza los productos desde su ERP, CSV o Excel;
+2. el conector transforma los datos y realiza un upsert por `ItemCode`;
+3. el catalogo local queda disponible para lecturas rapidas;
+4. Legio invoca `/mcp` usando la credencial MCP del proveedor;
+5. las tools consultan unicamente la base local de esa instalacion.
+
+Esto permite que dos proveedores utilicen el mismo codigo de producto sin
+mezclar precios, stock, contactos o condiciones comerciales.
+
+### Ejemplo de configuracion de un proveedor
+
+El siguiente ejemplo es ilustrativo. Las claves reales deben inyectarse como
+secretos del entorno, de Docker o del proveedor cloud; no deben incluirse en
+Git:
+
+```yaml
+services:
+  supplier-api:
+    image: ghcr.io/organizacion/ignakeeai-mcp-server-supplier:1.0.0
+    ports:
+      - "5100:5100"
+    volumes:
+      - supplier_catalog:/app/data
+    environment:
+      ASPNETCORE_URLS: http://+:5100
+      DatabaseProvider: sqlite
+      ConnectionStrings__Catalog: Data Source=/app/data/catalog.db
+      Erp__Provider: Odoo
+      Erp__Odoo__Url: https://erp.proveedor.example.com
+      Erp__Odoo__Database: proveedor_produccion
+      Erp__Odoo__Username: ${ODOO_USERNAME}
+      Erp__Odoo__Password: ${ODOO_PASSWORD}
+      Admin__ApiKey: ${ADMIN_API_KEY}
+      Mcp__Clients__0__ClientId: legio-proveedor-a
+      Mcp__Clients__0__ApiKey: ${MCP_API_KEY}
+      Supplier__VendorName: Proveedor A
+      Supplier__ContactEmail: soporte@proveedor.example.com
+      Supplier__ContactPhone: "+34 900 000 000"
+      Supplier__BusinessHours: L-V 08:00-18:00
+
+volumes:
+  supplier_catalog:
+```
+
+En este ejemplo, el endpoint que se registraria en Legio seria:
+
+```text
+https://mcp.proveedor.example.com/mcp
+```
+
+El puerto `5100` puede permanecer privado detras de un reverse proxy. El proxy
+termina TLS, publica el dominio HTTPS y reenvia el trafico hacia la aplicacion.
+El volumen `/app/data` es obligatorio cuando se utiliza SQLite; sin el, el
+catalogo podria perderse al recrear el contenedor.
+
+### Proceso de incorporacion de un proveedor
+
+Un onboarding tipico comprende estas etapas:
+
+1. seleccionar una version estable del servidor;
+2. crear la base de datos o el volumen persistente;
+3. configurar el ERP y probar la conectividad desde la instancia;
+4. definir las variables `Supplier:*` y las credenciales como secretos;
+5. iniciar la aplicacion y comprobar `GET /health`;
+6. ejecutar una primera sincronizacion y validar `GET /admin/catalog/stats`;
+7. probar las tools MCP con datos no sensibles;
+8. publicar `/mcp` mediante HTTPS y restringir `/admin/*`;
+9. registrar en Legio la URL, el `clientId` y los scopes permitidos;
+10. establecer monitorizacion, copias de seguridad y un procedimiento de
+    actualizacion.
+
+Las actualizaciones deben realizarse por version: probar primero la nueva
+imagen en un entorno de validacion, conservar una copia de seguridad del
+catalogo y despues actualizar la instancia productiva. No se recomienda que un
+proveedor despliegue directamente la rama `main` o una rama de trabajo sin
+validacion.
+
 ---
 
 ## 10. Despliegue (contenedor)
@@ -319,20 +469,20 @@ Persistencia recomendada por volumen:
 
 CI/CD:
 
-- `github/workflows/ci.yml`: restore, build, test
-- `github/workflows/release.yml`: buildx + push a GHCR por tag `v*`
+- `.github/workflows/ci.yml`: restore, build, test
+- `.github/workflows/release.yml`: buildx + push a GHCR por tag `v*`
 
 ---
 
-## 11. Calidad, pruebas y validación
+## 11. Calidad, pruebas y validacion
 
 Cobertura funcional observable:
 
-- `PricingToolsTests`: precio por código/descripcion/oferta/no encontrado.
-- `AlternativeSearchTests`: criterios de sustitución.
-- `OdooConnectorTests`: happy path, errores auth, catálogo vacío, upsert, nullables, comunicación JSON-RPC.
+- `PricingToolsTests`: precio por codigo/descripcion/oferta/no encontrado.
+- `AlternativeSearchTests`: criterios de sustitucion.
+- `OdooConnectorTests`: happy path, errores auth, catalogo vacio, upsert, nullables, comunicacion JSON-RPC.
 
-Buenas prácticas de validación en pipeline:
+Buenas practicas de validacion en pipeline:
 
 1. `dotnet restore`
 2. `dotnet build -c Release`
@@ -343,31 +493,31 @@ Buenas prácticas de validación en pipeline:
 
 ## 12. Seguridad y hardening recomendado
 
-Para producción:
+Para produccion:
 
 - Restringir CORS (`AllowAnyOrigin` solo para desarrollo).
-- Proteger endpoints `/admin/*` con autenticación/autorización.
+- Proteger endpoints `/admin/*` con autenticacion/autorizacion.
 - Mover credenciales ERP a secret manager.
-- Activar TLS en perímetro (Ingress/Reverse Proxy).
-- Registrar auditoría de sincronizaciones.
+- Activar TLS en perimetro (Ingress/Reverse Proxy).
+- Registrar auditoria de sincronizaciones.
 - Aplicar rate limiting sobre `/mcp` y `/admin/*`.
-- Añadir timeouts/retries con políticas de resiliencia en `HttpClient`.
+- Anadir timeouts/retries con politicas de resiliencia en `HttpClient`.
 
 ---
 
-## 13. Riesgos y observaciones técnicas actuales
+## 13. Riesgos y observaciones tecnicas actuales
 
-Observaciones detectadas en estado actual del código:
+Observaciones detectadas en estado actual del codigo:
 
-1. `AdminCatalogEndPoint` está implementado, pero no se observa llamado a `MapAdminCatalogEndpoints()` en `Program.cs`; por tanto, esos endpoints no quedarían expuestos hasta mapearse explícitamente.
-2. El `Dockerfile` referencia `COPY --from=publish` sin etapa `publish` declarada; la publicación se ejecuta en la etapa `build`. Conviene corregir antes del release.
+1. `AdminCatalogEndPoint` esta implementado, pero no se observa llamado a `MapAdminCatalogEndpoints()` en `Program.cs`; por tanto, esos endpoints no quedarian expuestos hasta mapearse explicitamente.
+2. El `Dockerfile` referencia `COPY --from=publish` sin etapa `publish` declarada; la publicacion se ejecuta en la etapa `build`. Conviene corregir antes del release.
 3. `ISupplierConfig` define propiedades no-null, mientras `SupplierConfig` expone algunas como nullable; revisar para coherencia de nullability.
 
-Estas observaciones no invalidan la arquitectura, pero sí afectan operatividad/release si no se ajustan.
+Estas observaciones no invalidan la arquitectura, pero si afectan operatividad/release si no se ajustan.
 
 ---
 
-## 14. Runbook mínimo de operación
+## 14. Runbook minimo de operacion
 
 ## 14.1 Arranque local
 
@@ -379,31 +529,31 @@ Estas observaciones no invalidan la arquitectura, pero sí afectan operatividad/r
    - `GET /` => metadata
    - transporte MCP en `/mcp`
 
-## 14.2 Sincronización de catálogo
+## 14.2 Sincronizacion de catalogo
 
 - ERP: `POST /admin/sync/erp`
 - Excel: `POST /admin/sync/excel` (`form-data`, `file`)
 - CSV: `POST /admin/sync/csv` (`form-data`, `file`)
-- Métricas básicas: `GET /admin/catalog/stats`
+- Metricas basicas: `GET /admin/catalog/stats`
 
 ---
 
-## 15. Evolución recomendada (roadmap)
+## 15. Evolucion recomendada (roadmap)
 
 1. Exponer OpenAPI para endpoints admin.
-2. Programar sincronizaciones periódicas (`IHostedService` o scheduler externo).
-3. Añadir multi-tenant (catálogo por proveedor).
-4. Incorporar cache para búsquedas frecuentes.
-5. Telemetría estructurada (OpenTelemetry + trazas de tool).
-6. Versionado explícito de contrato MCP y compatibilidad hacia atrás.
+2. Programar sincronizaciones periodicas (`IHostedService` o scheduler externo).
+3. Anadir multi-tenant (catalogo por proveedor).
+4. Incorporar cache para busquedas frecuentes.
+5. Telemetria estructurada (OpenTelemetry + trazas de tool).
+6. Versionado explicito de contrato MCP y compatibilidad hacia atras.
 
 ---
 
-## 16. Decisiones arquitectónicas clave
+## 16. Decisiones arquitectonicas clave
 
-- Catálogo local como fuente de lectura de baja latencia para tools MCP.
+- Catalogo local como fuente de lectura de baja latencia para tools MCP.
 - Integraciones ERP desacopladas mediante `IErpConnector`.
-- Lógica de negocio centralizada en `CatalogSearchService`.
+- Logica de negocio centralizada en `CatalogSearchService`.
 - Persistencia abstracta por `ICatalogRepository`.
 - Extensibilidad por nuevos conectores sin modificar dominio.
 
