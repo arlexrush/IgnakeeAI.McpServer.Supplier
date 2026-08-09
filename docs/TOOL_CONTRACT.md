@@ -2,7 +2,9 @@
 
 ## 1) Objetivo
 
-Este documento define el contrato funcional y de compatibilidad de las herramientas MCP expuestas por el servidor de proveedor.
+Este documento define el contrato que el proveedor ofrece a los agentes de Legio, el
+cliente MCP. Debe entregarse al equipo que configura la integración junto con la URL HTTPS
+de `/mcp`, el `MCP_CLIENT_ID` y la `MCP_API_KEY`.
 
 - Endpoint MCP: `/mcp`
 - Runtime: `.NET 8`
@@ -153,6 +155,7 @@ Devuelve datos de atención del proveedor.
 ### Autenticaci?n y autorizaci?n
 
 - `/mcp` requiere una API key de `Mcp:Clients` con `catalog.read`.
+- Legio debe enviar la clave en la cabecera `X-Api-Key`; no se utiliza `Authorization: Bearer`.
 - Las consultas de disponibilidad requieren adem?s `availability.read` cuando se
   apliquen pol?ticas espec?ficas al transporte.
 - Las API keys administrativas (`Admin:ApiKey`) no son v?lidas para `/mcp`.

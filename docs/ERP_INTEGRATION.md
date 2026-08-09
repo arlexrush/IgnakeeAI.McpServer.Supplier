@@ -2,7 +2,8 @@
 
 ## 1. Objetivo
 
-Este documento describe cómo integrar y sincronizar el catálogo de productos en `IgnakeeAI MCP Supplier Server` desde:
+Este documento está dirigido al equipo técnico del proveedor. Describe cómo alimentar el
+catálogo que consultarán los agentes de Legio desde:
 
 - ERP: `Odoo` o `SAP`
 - Ficheros: `CSV` o `Excel`
@@ -262,12 +263,14 @@ A `ItemCode`, B `Description`, C `Category`, D `Keywords`, E `Unit`, F `UnitPric
 - No guardar credenciales reales en repositorio.
 - Usar secretos/variables de entorno en despliegues.
 - Separar siempre la credencial administrativa de las credenciales MCP de Legio:
-  - `Admin__ApiKey` para `/admin/*`.
-  - `Mcp__Clients__0__ApiKey` para el cliente MCP.
-  - `Mcp__Clients__0__ClientId` identifica al cliente.
+  - `ADMIN_API_KEY` para `/admin/*`.
+  - `MCP_API_KEY` para el cliente MCP.
+  - `MCP_CLIENT_ID` identifica la integración de Legio.
   - `Mcp__Clients__0__Scopes__0=catalog.read`.
   - `Mcp__Clients__0__Scopes__1=availability.read`.
-- No configurar la misma API key en `Admin__ApiKey` y `Mcp__Clients:*`.
+- No configurar la misma API key en `ADMIN_API_KEY` y `MCP_API_KEY`.
+- Tras una sincronización, validar el catálogo con `GetPrice`, `SearchAlternatives` y
+  `CheckAvailability` desde Legio o con una petición MCP de prueba.
 - Proteger endpoints `/admin/*` antes de producción.
 - Limitar CORS y habilitar TLS en entorno productivo.
 

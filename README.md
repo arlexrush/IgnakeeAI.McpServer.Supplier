@@ -3,7 +3,7 @@
 > Servidor MCP (Model Context Protocol) para catálogo de proveedor, construido con .NET 8.  
 > Expone herramientas de consulta de precio, disponibilidad, alternativas y atención a través del protocolo MCP sobre HTTP.
 
-[![CI - Build & Test](https://github.com/IgnakeeProjects/mcp-supplier-server/actions/workflows/ci.yml/badge.svg)](github/workflows/ci.yml)
+[![CI - Build & Test](https://github.com/arlexrush/IgnakeeAI.McpServer.Supplier/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE.txt)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
@@ -28,8 +28,8 @@
 
 ## ¿Qué es?
 
-`IgnakeeAI MCP Supplier Server` es un servidor MCP orientado al sector de construcción y distribución.  
-Permite que agentes LLM o clientes MCP consulten en tiempo real:
+`IgnakeeAI MCP Supplier Server` es la pieza que instala un proveedor para publicar su catálogo y sus condiciones comerciales ante los agentes de Legio, que actúan como clientes MCP.  
+El proveedor mantiene sus datos y el servidor expone, de forma controlada, consultas en tiempo real sobre:
 
 - precios de materiales,
 - disponibilidad de stock,
@@ -38,16 +38,26 @@ Permite que agentes LLM o clientes MCP consulten en tiempo real:
 
 El catálogo se alimenta desde múltiples fuentes: base de datos local (EF Core), archivos CSV/Excel y sincronización con ERP (Odoo o SAP).
 
+### Cómo encaja Legio
+
+El proveedor despliega este servidor en su infraestructura y entrega a Legio únicamente:
+
+1. la URL HTTPS pública del endpoint `/mcp`;
+2. un `MCP_CLIENT_ID` para identificar la integración;
+3. un `MCP_API_KEY` con los scopes `catalog.read` y `availability.read`.
+
+La clave administrativa `ADMIN_API_KEY` es exclusivamente del equipo del proveedor y nunca debe entregarse a Legio. Legio descubre las tools mediante MCP y las utiliza desde sus agentes para responder a consultas de productos, precios, alternativas y disponibilidad.
+
 ---
 
 ## Herramientas MCP expuestas
 
 | Tool                   | Descripción                                                                                    |
 |------------------------|------------------------------------------------------------------------------------------------|
-| `getPrice`             | Precio por código de artículo o descripción libre                                              |
-| `searchAlternatives`   | Búsqueda de sustitutos por criterio (`cheaper`, `better`, `onSale`, `optimalPack`, `any`)      |
-| `checkAvailability`    | Stock disponible y plazo de entrega estimado                                                   |
-| `getBusinessHours`     | Datos de contacto y horario de atención del proveedor                                          |
+| `GetPrice`             | Precio por código de artículo o descripción libre                                              |
+| `SearchAlternatives`   | Búsqueda de sustitutos por criterio (`cheaper`, `better`, `onSale`, `optimalPack`, `any`)      |
+| `CheckAvailability`    | Stock disponible y plazo de entrega estimado                                                   |
+| `GetBusinessHours`     | Datos de contacto y horario de atención del proveedor                                          |
 
 **Endpoint MCP:** `POST /mcp`  
 **Contrato completo:** [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md)
@@ -97,26 +107,26 @@ Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ### Opción A — Docker Compose con SQLite (recomendado para desarrollo)
 
-git clone <repo-url> 
-cd <repo-folder> 
-cp .env.example .env 
-docker compose -f docker-compose.yml -f 
-docker-compose.sqlite.yml up --build -d
+git clone https://github.com/arlexrush/IgnakeeAI.McpServer.Supplier.git
+cd IgnakeeAI.McpServer.Supplier
+Copy-Item .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
 
 
 ### Opción B — .NET CLI
 
-git clone <repo-url> 
-cd <repo-folder> 
-cp .env.example .env 
-dotnet restore 
-dotnet build -c Release 
+git clone https://github.com/arlexrush/IgnakeeAI.McpServer.Supplier.git
+cd IgnakeeAI.McpServer.Supplier
+Copy-Item .env.example .env
+dotnet restore
+dotnet build -c Release
 dotnet run --project src/IgnakeeAI.McpServer.Supplier.Api
 
 
 ### Verificar funcionamiento
 
-curl http://localhost:5100/health curl http://localhost:5100/
+Invoke-WebRequest http://localhost:5100/health
+Invoke-WebRequest http://localhost:5100/
 
 Guía completa: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
 
@@ -125,6 +135,8 @@ Guía completa: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
 ## Configuración
 
 Copia `.env.example` a `.env` y ajusta los valores necesarios.
+
+Para una integración con Legio, configura como mínimo `MCP_CLIENT_ID`, `MCP_API_KEY`, `ADMIN_API_KEY` y los datos de contacto del proveedor. En producción usa secretos externos y no subas `.env.production` al repositorio.
 
 ### Variables de entorno clave
 
@@ -138,6 +150,9 @@ Copia `.env.example` a `.env` y ajusta los valores necesarios.
 | `SUPPLIER_CONTACT_ADDRESS`   | Dirección                                                    | —                                                |
 | `SUPPLIER_BUSINESS_HOURS`    | Horario de atención                                          | —                                                |
 | `Erp__Provider`              | ERP activo: `odoo`, `sap` o vacío                            | vacío                                            |
+| `ADMIN_API_KEY`              | Autenticación del proveedor para `/admin/*`                  | —                                                |
+| `MCP_CLIENT_ID`              | Identidad del cliente MCP (Legio)                            | —                                                |
+| `MCP_API_KEY`                | Clave que Legio enviará en `X-Api-Key`                       | —                                                |
 
 Las migraciones de base de datos se aplican automáticamente al arrancar (`ApplyMigrationsOnStartup: true`).
 
@@ -147,20 +162,20 @@ Las migraciones de base de datos se aplican automáticamente al arrancar (`Apply
 
 ### ERP — Odoo o SAP
 
-Configurar `Erp__Provider` en `appsettings.json` o como variable de entorno y ejecutar:
+Configurar `Erp__Provider` en `appsettings.json` o como variable de entorno y ejecutar el endpoint administrativo con `X-Api-Key: ADMIN_API_KEY`:
 
-curl -X POST http://localhost:5100/admin/sync/erp
+curl -X POST http://localhost:5100/admin/sync/erp -H "X-Api-Key: <ADMIN_API_KEY>"
 
 
 ### CSV
-curl -X POST http://localhost:5100/admin/sync/csv -F "file=@catalogo.csv"
+curl -X POST http://localhost:5100/admin/sync/csv -H "X-Api-Key: <ADMIN_API_KEY>" -F "file=@catalogo.csv"
 
 
 Separador `;` con cabeceras: `ItemCode;Description;Category;Keywords;Unit;UnitPrice;...`
 
 ### Excel
 
-curl -X POST http://localhost:5100/admin/sync/excel -F "file=@catalogo.xlsx"
+curl -X POST http://localhost:5100/admin/sync/excel -H "X-Api-Key: <ADMIN_API_KEY>" -F "file=@catalogo.xlsx"
 
 
 Hoja `Catalogo` (o primera hoja), columnas A–Q.
@@ -262,11 +277,12 @@ Suites incluidas:
 | `release.yml`   | push de tag `v*` (ej. `v1.0.0`)       | build imagen multi-arch → push a GHCR  |
 
 ### Publicar una nueva versión
-git tag v1.0.0 git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 
 
 La imagen queda disponible en:
-ghcr.io/ignakeeai/mcp-supplier-server:1.0.0 ghcr.io/ignakeeai/mcp-supplier-server:latest
+`ghcr.io/arlexrush/mcp-supplier-server:1.0.0` y `ghcr.io/arlexrush/mcp-supplier-server:latest`.
 
 
 Guía completa: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)

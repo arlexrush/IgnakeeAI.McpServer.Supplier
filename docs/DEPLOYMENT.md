@@ -2,9 +2,9 @@
 
 ## 1. Objetivo
 
-Este documento describe cómo construir, publicar y desplegar `IgnakeeAI MCP Supplier Server`
-en los entornos **Development** y **Production**, incluyendo el flujo completo de CI/CD
-automatizado con GitHub Actions y la publicación de imágenes Docker en GHCR.
+Este documento guía a un proveedor desde la instalación hasta la integración productiva
+con los agentes de **Legio**, el cliente MCP. Incluye el flujo de CI/CD y la publicación
+de la imagen Docker en GHCR.
 
 ---
 
@@ -34,7 +34,7 @@ automatizado con GitHub Actions y la publicación de imágenes Docker en GHCR.
 ### 3.2 Production
 
 - Base de datos recomendada: PostgreSQL (o SQL Server según infraestructura).
-- Variables sensibles gestionadas como **Secrets** de GitHub o variables del sistema.
+- Variables sensibles gestionadas como secretos externos o variables del sistema.
 - Imagen publicada en GHCR y desplegada como contenedor.
 - Puerto de escucha: `5100` (mapeado desde host según entorno).
 - TLS/HTTPS gestionado por Ingress o Reverse Proxy externo (Nginx, Traefik, etc.).
@@ -54,8 +54,7 @@ automatizado con GitHub Actions y la publicación de imágenes Docker en GHCR.
   que tienen mayor prioridad que los ficheros `appsettings.json`.
 
 En desarrollo local, `appsettings.Development.json` y `.env.example` contienen valores
-no productivos coordinados para el cliente `legio-development`. Estos valores solo sirven
-para pruebas locales y deben sustituirse por secretos externos en producción.
+de prueba para una integración Legio. Deben sustituirse por secretos externos en producción.
 
 ### 4.2 Variables de entorno clave
 
@@ -86,13 +85,13 @@ cp .env.example .env
 | `SUPPLIER_CONTACT_PHONE`     | ambos            | Teléfono de contacto                         |
 | `SUPPLIER_CONTACT_ADDRESS`   | ambos            | Dirección del proveedor                      |
 | `SUPPLIER_BUSINESS_HOURS`    | ambos            | Horario de atención                          |
-| `Admin__ApiKey`              | ambos             | API key administrativa; usar secreto externo en producción |
+| `ADMIN_API_KEY`              | ambos             | API key del proveedor para `/admin/*`; secreto externo en producción |
+| `MCP_CLIENT_ID`              | ambos             | Identificador del cliente MCP Legio |
+| `MCP_API_KEY`                | ambos             | API key que Legio enviará en `X-Api-Key` |
 | `Mcp__ContractVersion`       | ambos             | Versión contractual, por defecto `1.0.0`    |
 | `Mcp__ProtocolVersion`       | opcional          | Versión MCP negociada/configurada            |
-| `Mcp__Clients__0__ClientId`  | producción       | Identificador del cliente MCP                |
-| `Mcp__Clients__0__ApiKey`    | producción       | API key del cliente MCP; secreto externo     |
-| `Mcp__Clients__0__Scopes__0` | producción       | Por ejemplo `catalog.read`                  |
-| `Mcp__Clients__0__Scopes__1` | producción       | Por ejemplo `availability.read`             |
+| `Mcp__Clients__0__Scopes__0` | producción       | Scope MCP configurado (`catalog.read`)      |
+| `Mcp__Clients__0__Scopes__1` | producción       | Scope MCP configurado (`availability.read`) |
 | `Supplier__Location__Latitude` | ambos           | Latitud operativa del proveedor              |
 | `Supplier__Location__Longitude`| ambos           | Longitud operativa del proveedor             |
 
@@ -106,8 +105,8 @@ cp .env.example .env
 ### 5.1 Opción A: .NET CLI (sin Docker)
 
 #### 1. Clonar el repositorio y preparar configuración
-git clone <repo-url> 
-cd <repo-folder>
+git clone https://github.com/arlexrush/IgnakeeAI.McpServer.Supplier.git
+cd IgnakeeAI.McpServer.Supplier
 
 #### 2. Copiar configuración de ejemplo
 cp .env.example .env
@@ -219,9 +218,9 @@ ignakeeai/mcp-supplier-server:local
 
 ## 7. Flujo de CI/CD con GitHub Actions
 
-El proyecto tiene dos pipelines definidos en `github/workflows/`:
+El proyecto tiene dos pipelines definidos en `.github/workflows/`:
 
-github/ 
+.github/ 
 └── workflows/ 
 	      ├── ci.yml        ← pipeline de integración continua (CI)    
 	      └── release.yml   ← pipeline de publicación de imagen (CD)
@@ -229,7 +228,7 @@ github/
 
 ### 7.1 Pipeline CI — `ci.yml`
 
-**Archivo:** `github/workflows/ci.yml`
+**Archivo:** `.github/workflows/ci.yml`
 
 **Cuándo se ejecuta:**
 - En cada `push` a las ramas `main` o `develop`.
@@ -253,7 +252,7 @@ checkout → setup .NET 8 → dotnet restore → dotnet build -c Release → dot
 
 ### 7.2 Pipeline CD — `release.yml`
 
-**Archivo:** `github/workflows/release.yml`
+**Archivo:** `.github/workflows/release.yml`
 
 **Cuándo se ejecuta:**
 - En cada `push` de un **tag** con prefijo `v` (ejemplos: `v1.0.0`, `v2.3.1`).
@@ -263,7 +262,8 @@ checkout → setup .NET 8 → dotnet restore → dotnet build -c Release → dot
 checkout → setup Docker Buildx → login GHCR → extraer versión del tag → build & push imagen multi-arquitectura (amd64 + arm64)
 
 **Imágenes publicadas en GHCR:**
-ghcr.io/ignakeeai/mcp-supplier-server:1.0.0   ← versión exacta ghcr.io/ignakeeai/mcp-supplier-server:latest  ← última versión
+ghcr.io/arlexrush/mcp-supplier-server:1.0.0   ← versión exacta
+ghcr.io/arlexrush/mcp-supplier-server:latest  ← última versión
 
 
 **Autenticación con GHCR:**
@@ -297,58 +297,109 @@ Repositorio → Actions → Release - Docker Image → verificar que completa si
 
 
 ### Paso 4 — Verificar la imagen publicada
-Repositorio → Packages → ghcr.io/ignakeeai/mcp-supplier-server
+Repositorio → Packages → `mcp-supplier-server`
 
 
 O desde terminal:
-docker pull ghcr.io/ignakeeai/mcp-supplier-server:1.0.0 docker pull ghcr.io/ignakeeai/mcp-supplier-server:latest
+docker pull ghcr.io/arlexrush/mcp-supplier-server:1.0.0
+docker pull ghcr.io/arlexrush/mcp-supplier-server:latest
 
 
 ---
 
-## 9. Despliegue en Production
+## 9. Despliegue en producción para un proveedor
 
-### 9.1 Preparar variables de producción
+### 9.1 Preparar el servidor
 
-En el servidor de producción, crear un archivo `.env.production` (nunca en repositorio):
-ASPNETCORE_ENVIRONMENT=Production DatabaseProvider=postgresql ConnectionStrings__Catalog=Host=<host>;Port=5432;Database=supplier_catalog;Username=supplier_user;Password=<password_segura> POSTGRES_DB=supplier_catalog POSTGRES_USER=supplier_user POSTGRES_PASSWORD=<password_segura>
+El servidor de producción necesita Docker Engine/Desktop, Docker Compose 2.x y acceso de lectura al paquete privado de GHCR. Autentica el registro con una cuenta o token que tenga `read:packages`:
 
-SUPPLIER_VENDOR_NAME=Mi Empresa S.L. SUPPLIER_CONTACT_EMAIL=ventas@miempresa.com SUPPLIER_CONTACT_PHONE=+34 900 000 000 SUPPLIER_CONTACT_ADDRESS=Calle Real 1, Madrid SUPPLIER_BUSINESS_HOURS=Lun-Vie 08:00-18:00
+```powershell
+docker login ghcr.io -u arlexrush
+```
 
-Solo si se usa ERP:
-Erp__Provider=odoo Erp__Odoo__BaseUrl=https://mi-odoo.com Erp__Odoo__Database=mi_empresa Erp__Odoo__Username=api_user Erp__Odoo__Password=<password_erp>
+No guardes el token en `.env.production` ni lo compartas con Legio.
 
+### 9.2 Preparar `.env.production`
 
-### 9.2 Desplegar con Docker Compose en producción
+Crea el fichero fuera del repositorio:
 
-En el servidor de producción:
-1. Descargar la imagen publicada (versión específica recomendada)
-docker pull ghcr.io/ignakeeai/mcp-supplier-server:1.0.0
+```powershell
+Copy-Item .env.example .env.production
+notepad .env.production
+```
 
-2. Crear docker-compose.production.yml
-docker-compose.production.yml services: api: image: ghcr.io/ignakeeai/mcp-supplier-server:1.0.0 restart: always ports: - "5100:5100" env_file: - .env.production depends_on: postgres: condition: service_healthy
-postgres: image: postgres:16 restart: always env_file: - .env.production volumes: - supplier_postgres_data:/var/lib/postgresql/data healthcheck: test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] interval: 10s timeout: 5s retries: 5
-volumes: supplier_postgres_data:
+Configura como mínimo:
 
-3. Iniciar en producción
-docker compose -f docker-compose.production.yml up -d
+```dotenv
+ASPNETCORE_ENVIRONMENT=Production
+DatabaseProvider=postgresql
+POSTGRES_DB=supplier_catalog
+POSTGRES_USER=supplier_user
+POSTGRES_PASSWORD=<secreto-postgres>
 
-4. Verificar salud
-curl http://localhost:5100/health curl http://localhost:5100/
+SUPPLIER_VENDOR_NAME=Mi Empresa S.L.
+SUPPLIER_CONTACT_EMAIL=ventas@miempresa.com
+SUPPLIER_CONTACT_PHONE=+34 900 000 000
+SUPPLIER_CONTACT_ADDRESS=Calle Real 1, Madrid
+SUPPLIER_BUSINESS_HOURS=Lun-Vie 08:00-18:00
 
+ADMIN_API_KEY=<clave-solo-para-el-proveedor>
+MCP_CLIENT_ID=legio-production
+MCP_API_KEY=<clave-que-se-entregara-a-legio>
+Mcp__ContractVersion=1.0.0
+Mcp__ProtocolVersion=2025-03-26
+```
 
-### 9.3 Actualizar a una nueva versión en producción
-1. Descargar nueva imagen
-docker pull ghcr.io/ignakeeai/mcp-supplier-server:1.1.0
+Si se utiliza un ERP, añade `Erp__Provider` y las credenciales correspondientes. El fichero debe permanecer fuera de Git.
 
-2. Actualizar la imagen en docker-compose.production.yml
-image: ghcr.io/ignakeeai/mcp-supplier-server:1.1.0
+### 9.3 Descargar y levantar la imagen
 
-3. Recrear el contenedor (sin downtime en bases de datos)
-docker compose -f docker-compose.production.yml up -d --no-deps api
+La imagen publicada por GitHub Actions es:
 
-4. Verificar
-curl http://localhost:5100/health
+```text
+ghcr.io/arlexrush/mcp-supplier-server:<version>
+ghcr.io/arlexrush/mcp-supplier-server:latest
+```
+
+Valida primero la interpolación y después inicia los servicios:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml config
+docker compose --env-file .env.production -f docker-compose.production.yml pull
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+```
+
+El Compose de producción utiliza PostgreSQL y espera a que su healthcheck esté listo antes de iniciar la API. La API escucha en el puerto `5100`; en una instalación pública debe quedar detrás de HTTPS mediante un reverse proxy.
+
+### 9.4 Verificación y conexión de Legio
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+Invoke-WebRequest http://localhost:5100/health
+Invoke-WebRequest http://localhost:5100/
+```
+
+El proveedor entrega a Legio únicamente:
+
+- `https://dominio-del-proveedor.example/mcp`;
+- `MCP_CLIENT_ID`;
+- `MCP_API_KEY`;
+- protocolo `2025-03-26` y contrato `1.0.0`;
+- scopes `catalog.read` y `availability.read`.
+
+No entregue a Legio `ADMIN_API_KEY`, contraseñas PostgreSQL ni credenciales ERP.
+
+### 9.5 Actualizar una versión
+
+El pipeline publica una imagen versionada y `latest` cuando se envía un tag `v*`. Para actualizar de forma controlada, use la etiqueta versionada:
+
+```powershell
+docker pull ghcr.io/arlexrush/mcp-supplier-server:1.0.1
+# Actualizar image en docker-compose.production.yml a :1.0.1
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --no-deps api
+```
+
+Comprueba `/health` y las tools MCP antes de comunicar la actualización a Legio.
 
 
 ---
@@ -403,9 +454,9 @@ Esperado: { "erp": "Odoo"|"SAP", "productsSynced": N, "syncedAt": "..." }
 curl -X POST http://localhost:5100/admin/sync/csv 
 -F "file=@seed/seed-catalog.csv"
 
-6. Verificar tool MCP
+6. Verificar tool MCP con la clave de `MCP_API_KEY`
 curl -X POST http://localhost:5100/mcp 
--H "X-Api-Key: <mcp-secret>" 
+-H "X-Api-Key: <MCP_API_KEY>" 
 -H "Accept: application/json, text/event-stream" 
 -H "Content-Type: application/json" 
 -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"GetPrice","arguments":{"itemDescription":"cemento","currency":"EUR"}}}'
@@ -442,41 +493,5 @@ Ejemplos de secrets adicionales:
 
 Developer │ 
           ├─► push a develop / PR a main │       
-		  └─► CI: restore → build → test │                   
-		  └─► ✅ verde = puede mergear   │ 
-		  ├─► merge a main │       
-		  └─► CI: restore → build → test (confirmación final) │ 
-		  └─► git tag v1.x.x + git push origin v1.x.x 
-		  └─► CD: buildx → build imagen multi-arch 
-		  └─► push a GHCR 
-		  ├─► ghcr.io/.../mcp-supplier-server:1.x.x 
-		  └─► ghcr.io/.../mcp-supplier-server:latest 
-		  └─► despliegue manual en servidor de producción 
-		  └─► docker compose pull + up -d
-
-
----
-
-## 14. Seguridad en despliegue
-
-- **Nunca** incluir credenciales reales en `appsettings.json` ni en el repositorio.
-- Usar `.env.production` fuera del repositorio o un gestor de secretos (Vault, Azure Key Vault).
-- Proteger los endpoints `/admin/*` con autenticación antes de exponer a internet.
-- Restringir CORS en producción mediante `Cors:AllowedOrigins`.
-- Activar TLS mediante Nginx/Traefik como reverse proxy delante del puerto `5100`.
-- Aplicar rate limiting sobre `/mcp` y `/admin/*` en producción.
-
----
-
-## 15. Troubleshooting de despliegue
-
-| Síntoma                              | Causa probable                                               | Solución                                              |
-|--------------------------------------|--------------------------------------------------------------|-------------------------------------------------------|
-| `connection refused` en puerto 5100  | Contenedor no iniciado o puerto no mapeado                   | `docker compose ps` + revisar `ports`                 |
-| `GET /health` devuelve error         | Fallo de migración al arrancar                               | Revisar logs: `docker compose logs api`               |
-| `productsSynced = 0` tras sync ERP   | Credenciales ERP incorrectas o proveedor vacío               | Revisar `Erp__Provider` y credenciales                |
-| Error en CI `dotnet build`           | Código no compila                                            | Revisar errores en GitHub Actions → CI                |
-| Imagen no aparece en GHCR            | Tag no tiene prefijo `v`                                     | Usar `git tag v1.0.0` (con `v` minúscula)             |
-| BD no se crea en PostgreSQL          | PostgreSQL no healthy al arrancar                            | Verificar `healthcheck` y `depends_on`                |
-| Variables de entorno no aplicadas    | Fichero `.env` no cargado                                    | Pasar `--env-file .env` o usar `env_file:` en compose |
+		  └─► CI: restore → build → test │                  
 
