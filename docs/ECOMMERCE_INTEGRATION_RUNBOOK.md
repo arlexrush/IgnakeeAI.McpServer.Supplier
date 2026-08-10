@@ -173,7 +173,7 @@ Respuesta esperada:
 
 ## 6. Supplier configuration
 
-## 6.1 Variables del conector Ecommerce
+### 6.1 Variables del conector Ecommerce
 
 | appsettings | env var | Requerido | Valor recomendado |
 |---|---|---|---|
@@ -187,7 +187,7 @@ Respuesta esperada:
 
 > No confirmes `EcommerceInventory__BearerToken` en el repositorio ni lo escribas en logs.
 
-## 6.2 Variables administrativas y MCP
+### 6.2 Variables administrativas y MCP
 
 Si ejecutas el proceso directamente, usa las claves reales que consume ASP.NET Core:
 
