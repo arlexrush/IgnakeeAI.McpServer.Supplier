@@ -205,8 +205,8 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     });
 
                 var startedAt = DateTimeOffset.UtcNow;
-                var pageSize = config.GetValue<int>("EcommerceInventory:SyncPageSize", 100);
-                if (pageSize <= 0) pageSize = 100;
+                var pageSize = config.GetValue<int>("EcommerceInventory:SyncPageSize", 50);
+                if (pageSize <= 0) pageSize = 50;
 
                 var totalImported = 0;
                 var totalUpserted = 0;

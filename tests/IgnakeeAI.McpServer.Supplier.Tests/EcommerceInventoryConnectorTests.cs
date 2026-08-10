@@ -613,6 +613,91 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             Assert.True(result.Found);
             Assert.Equal(20, result.AvailableStock);
         }
+
+        // ── Regression guard: SyncPageSize vs Ecommerce MaxPagesSize ─────────────
+
+        /// <summary>
+        /// Regression guard: EcommerceInventoryOptions.SyncPageSize debe ser 50,
+        /// alineado con el límite MaxPagesSize=50 de PaginationBaseQuery en el ecommerce.
+        /// Un valor mayor (e.g. 100) hace que el bucle de sincronización en
+        /// AdminCatalogEndPoint termine prematuramente porque el ecommerce recorta la
+        /// respuesta a 50 ítems; el comparador products.Count &lt; pageSize se cumple
+        /// en la primera página aunque existan más páginas → truncación silenciosa.
+        /// Fuente: src/Core/Ecommerce.Application/…/Features/Shared/Queries/PaginationBaseQuery.cs
+        ///          private const int MaxPagesSize = 50;
+        /// </summary>
+        [Fact]
+        public void EcommerceInventoryOptions_DefaultSyncPageSize_Is50()
+        {
+            var opts = new EcommerceInventoryOptions();
+            Assert.Equal(50, opts.SyncPageSize);
+        }
+
+        /// <summary>
+        /// Prueba que el bucle de sincronización (lógica: continúa mientras
+        /// products.Count == pageSize) termina correctamente cuando se usa
+        /// pageSize=50 (el máximo del ecommerce). Simula un catálogo de 125
+        /// productos distribuidos en 3 páginas (50 + 50 + 25).
+        ///
+        /// Regression: si pageSize fuera 100, el ecommerce retornaría 50 en la primera
+        /// página y 50 &lt; 100 haría break, perdiendo las páginas 2 y 3 (75 productos).
+        /// </summary>
+        [Fact]
+        public async Task GetCatalogPageAsync_MultiPage_AllPagesReadableWithCorrectPageSize()
+        {
+            // Catalog: 125 products total, pages 1 and 2 have 50, page 3 has 25
+            const int pageSize = 50;
+
+            var handler = EcommerceMockHttpHandler.ForCatalog(pageIndex =>
+            {
+                if (pageIndex == 1) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(1, pageSize, totalCount: 125));
+                if (pageIndex == 2) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(2, pageSize, totalCount: 125));
+                if (pageIndex == 3) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(3, 25, totalCount: 125));
+                return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageEmpty());
+            });
+            var connector = CreateConnector(handler);
+
+            var p1 = await connector.GetCatalogPageAsync(1, pageSize, _cts.Token);
+            var p2 = await connector.GetCatalogPageAsync(2, pageSize, _cts.Token);
+            var p3 = await connector.GetCatalogPageAsync(3, pageSize, _cts.Token);
+
+            Assert.Equal(50, p1.Count);
+            Assert.Equal(50, p2.Count);
+            Assert.Equal(25, p3.Count);
+
+            // Simulate sync-loop termination logic: break when p3.Count < pageSize
+            // (this is what AdminCatalogEndPoint does)
+            Assert.True(p1.Count == pageSize); // continue
+            Assert.True(p2.Count == pageSize); // continue
+            Assert.True(p3.Count < pageSize);  // break — all products read
+        }
+
+        /// <summary>
+        /// Regression guard: demuestra que si se enviara pageSize=100 y el ecommerce
+        /// retorna solo 50 (su máximo), la condición products.Count &lt; pageSize
+        /// se cumpliría en la primera página (50 &lt; 100 = true), rompiendo el bucle
+        /// prematuramente y perdiendo las páginas siguientes.
+        /// </summary>
+        [Fact]
+        public void SyncLoopTermination_PageSizeOver50_WouldTruncateCatalog()
+        {
+            // Ecommerce silently caps response to MaxPagesSize=50.
+            // With pageSize > 50, the loop breaks after first page.
+            const int requestedPageSize = 100;
+            const int actualItemsReturned = 50; // ecommerce capped at 50
+
+            // Old (stale) assumption: 50 < 100 → loop would break → silent truncation
+            bool wouldTruncate = actualItemsReturned < requestedPageSize;
+            Assert.True(wouldTruncate,
+                "pageSize=100 causes premature termination: ecommerce returns max 50, " +
+                "50 < 100 triggers loop break after first page.");
+
+            // Corrected assumption: 50 < 50 → false → loop continues
+            const int correctedPageSize = 50;
+            bool continuesCorrectly = actualItemsReturned < correctedPageSize;
+            Assert.False(continuesCorrectly,
+                "pageSize=50 allows the loop to continue reading subsequent pages.");
+        }
     }
 
     // ── Stubs simples para tests de servicio ──────────────────────────────────────

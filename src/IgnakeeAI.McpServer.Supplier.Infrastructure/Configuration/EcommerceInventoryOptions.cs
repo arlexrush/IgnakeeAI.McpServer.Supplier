@@ -65,7 +65,13 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration
         /// <summary>Ruta del endpoint de catálogo para sincronización paginada.</summary>
         public string CatalogSyncPath { get; set; } = "/api/v1/inventory";
 
-        /// <summary>Tamaño de página en la sincronización del catálogo.</summary>
-        public int SyncPageSize { get; set; } = 100;
+        /// <summary>
+        /// Tamaño de página en la sincronización del catálogo.
+        /// El ecommerce aplica un máximo de 50 (PaginationBaseQuery.MaxPagesSize).
+        /// Valores mayores son recortados silenciosamente por el servidor, lo que
+        /// haría que el bucle de sincronización terminara prematuramente al comparar
+        /// products.Count &lt; pageSize. Por eso el máximo seguro es 50.
+        /// </summary>
+        public int SyncPageSize { get; set; } = 50;
     }
 }
