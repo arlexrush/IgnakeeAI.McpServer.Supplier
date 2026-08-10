@@ -677,6 +677,8 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         /// retorna solo 50 (su máximo), la condición products.Count &lt; pageSize
         /// se cumpliría en la primera página (50 &lt; 100 = true), rompiendo el bucle
         /// prematuramente y perdiendo las páginas siguientes.
+        /// Con pageSize=50 (el valor corregido), la condición 50 &lt; 50 = false NO se
+        /// cumple en una página llena, por lo que el bucle continúa correctamente.
         /// </summary>
         [Fact]
         public void SyncLoopTermination_PageSizeOver50_WouldTruncateCatalog()
@@ -690,13 +692,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             bool wouldTruncate = actualItemsReturned < requestedPageSize;
             Assert.True(wouldTruncate,
                 "pageSize=100 causes premature termination: ecommerce returns max 50, " +
-                "50 < 100 triggers loop break after first page.");
-
-            // Corrected assumption: 50 < 50 → false → loop continues
-            const int correctedPageSize = 50;
-            bool continuesCorrectly = actualItemsReturned < correctedPageSize;
-            Assert.False(continuesCorrectly,
-                "pageSize=50 allows the loop to continue reading subsequent pages.");
+                "50 < 100 triggers loop break after first page, losing remaining pages.");
         }
     }
 
