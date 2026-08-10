@@ -195,6 +195,14 @@ Autenticación: `Authorization: Bearer <JWT>`. La identidad técnica debe tener 
 
 La respuesta del catálogo usa la semántica `PaginationVm<T>`: `data[]`, `count`, `pageIndex`, `pageSize`, `pageCount`, `resultByPage`.
 
+> **Fuente del contrato:** `src/Api/Ecommerce.Api/Controllers/InventoryController.cs` y
+> `src/Core/Ecommerce.Application/…/Features/Shared/Queries/PaginationBaseQuery.cs`
+> en `arlexrush/IgnakeeEcommerce-BackEnd` (rama por defecto).
+
+> **Límite del servidor:** el ecommerce aplica `MaxPagesSize = 50` en `PaginationBaseQuery`.
+> `SyncPageSize` debe ser ≤ 50; valores superiores son recortados silenciosamente y
+> provocan que el bucle de sincronización termine en la primera página, perdiendo el resto del catálogo.
+
 **Habilitar la integración** (`appsettings.json` o variables de entorno):
 
 ```json
@@ -205,7 +213,7 @@ La respuesta del catálogo usa la semántica `PaginationVm<T>`: `data[]`, `count
   "TimeoutSeconds": 10,
   "ProductLookupPath": "/api/v1/inventory/{productCode}",
   "CatalogSyncPath": "/api/v1/inventory",
-  "SyncPageSize": 100
+  "SyncPageSize": 50
 }
 ```
 
