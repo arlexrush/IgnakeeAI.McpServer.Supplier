@@ -153,8 +153,16 @@ Para una integración con Legio, configura como mínimo `MCP_CLIENT_ID`, `MCP_AP
 | `ADMIN_API_KEY`              | Autenticación del proveedor para `/admin/*`                  | —                                                |
 | `MCP_CLIENT_ID`              | Identidad del cliente MCP (Legio)                            | —                                                |
 | `MCP_API_KEY`                | Clave que Legio enviará en `X-Api-Key`                       | —                                                |
+| `EcommerceInventory__Enabled` | Habilita el conector con Ecommerce                          | `false`                                          |
+| `EcommerceInventory__BaseUrl` | URL base del inventario de Ecommerce                        | —                                                |
+| `EcommerceInventory__BearerToken` | JWT técnico para el header `Authorization`            | —                                                |
+| `EcommerceInventory__ProductLookupPath` | Ruta del producto individual                   | `/api/v1/inventory/{productCode}`                |
+| `EcommerceInventory__CatalogSyncPath` | Ruta del catálogo paginado                       | `/api/v1/inventory`                              |
+| `EcommerceInventory__SyncPageSize` | Tamaño de página seguro para sync                    | `50`                                             |
 
 Las migraciones de base de datos se aplican automáticamente al arrancar (`ApplyMigrationsOnStartup: true`).
+
+> Si ejecutas el proceso fuera de Docker Compose, usa las claves runtime `Admin__ApiKey`, `Mcp__Clients__0__ClientId` y `Mcp__Clients__0__ApiKey`. Los nombres `ADMIN_API_KEY`, `MCP_CLIENT_ID` y `MCP_API_KEY` del `.env.example` son alias prácticos para `docker-compose.production.yml`.
 
 ---
 
@@ -184,14 +192,14 @@ Hoja `Catalogo` (o primera hoja), columnas A–Q.
 
 El conector de inventario ecommerce conecta con la API REST de inventario de `IgnakeeEcommerce-BackEnd`.
 
-**Contrato del endpoint del ecommerce:**
+**Contrato real consumido por el Supplier:**
 
 | Operación | Método | Ruta |
 |-----------|--------|------|
 | Producto individual | `GET` | `/api/v1/inventory/{productCode}` |
 | Catálogo paginado (PaginationVm) | `GET` | `/api/v1/inventory?pageIndex={n}&pageSize={n}` |
 
-Autenticación: `Authorization: Bearer <JWT>`. La identidad técnica debe tener el rol `INVENTORY_READER` (o `ADMIN` para break-glass).
+Autenticación: header `Authorization` con el JWT del usuario técnico. La identidad técnica debe tener el rol `INVENTORY_READER` (o `ADMIN` para break-glass). `SUPPLIER_INTEGRATION` por sí solo no autoriza este controlador.
 
 La respuesta del catálogo usa la semántica `PaginationVm<T>`: `data[]`, `count`, `pageIndex`, `pageSize`, `pageCount`, `resultByPage`.
 
@@ -203,27 +211,15 @@ La respuesta del catálogo usa la semántica `PaginationVm<T>`: `data[]`, `count
 > `SyncPageSize` debe ser ≤ 50; valores superiores son recortados silenciosamente y
 > provocan que el bucle de sincronización termine en la primera página, perdiendo el resto del catálogo.
 
-**Habilitar la integración** (`appsettings.json` o variables de entorno):
+**Configuración mínima en Supplier:** `EcommerceInventory__Enabled=true`, `EcommerceInventory__BaseUrl`, `EcommerceInventory__BearerToken` y `EcommerceInventory__SyncPageSize=50`.
 
-```json
-"EcommerceInventory": {
-  "Enabled": true,
-  "BaseUrl": "https://ecommerce.example.com",
-  "BearerToken": "",
-  "TimeoutSeconds": 10,
-  "ProductLookupPath": "/api/v1/inventory/{productCode}",
-  "CatalogSyncPath": "/api/v1/inventory",
-  "SyncPageSize": 50
-}
-```
-
-> **Seguridad:** nunca confirmes `BearerToken` en el repositorio. Inyecta el token mediante la variable de entorno `EcommerceInventory__BearerToken` o un secret manager.
+> **Seguridad:** nunca confirmes `BearerToken` en el repositorio. Inyecta el token mediante `EcommerceInventory__BearerToken` o un secret manager.
 
 **Sincronización manual del catálogo:**
 
 ```bash
 curl -X POST http://localhost:5100/admin/sync/ecommerce \
-  -H "X-Admin-Key: <admin-key>"
+  -H "X-Api-Key: <ADMIN_API_KEY>"
 ```
 
 Pagina por el catálogo activo del ecommerce (usando `pageIndex` y `pageSize`) y realiza upsert por `ItemCode`/`ProductCode`.
@@ -245,8 +241,8 @@ Cuando `Enabled = true`, `checkAvailability` consulta el ecommerce en tiempo rea
 | `purchaseLeadTime`     | `LeadTimeDays`          | Normalizado: hours÷24, weeks×7           |
 | `status = "active"`    | `IsActive = true`       | Cualquier otro valor → false             |
 
-Manual completo: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
-
+Runbook completo: [`docs/ECOMMERCE_INTEGRATION_RUNBOOK.md`](docs/ECOMMERCE_INTEGRATION_RUNBOOK.md)  
+Otras fuentes de carga: [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)
 ---
 
 ## Endpoints disponibles
@@ -302,6 +298,7 @@ Guía completa: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | Documento                                             | Contenido                                                                        |
 |-------------------------------------------------------|----------------------------------------------------------------------------------|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)        | Arquitectura, flujos, modelo de dominio, decisiones técnicas                     |
+| [`docs/ECOMMERCE_INTEGRATION_RUNBOOK.md`](docs/ECOMMERCE_INTEGRATION_RUNBOOK.md) | Runbook canónico de integración Ecommerce ↔ Supplier                 |
 | [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md)      | Contrato MCP: parámetros y esquemas de respuesta de cada tool                    |
 | [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)  | Manual de integración con Odoo, SAP, CSV y Excel                                 |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)            | Despliegue local, en contenedor y CI/CD                                          |

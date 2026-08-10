@@ -8,6 +8,9 @@ catálogo que consultarán los agentes de Legio desde:
 - ERP: `Odoo` o `SAP`
 - Ficheros: `CSV` o `Excel`
 
+> Si el origen es `IgnakeeEcommerce-BackEnd`, usa el runbook dedicado:
+> [`docs/ECOMMERCE_INTEGRATION_RUNBOOK.md`](./ECOMMERCE_INTEGRATION_RUNBOOK.md).
+
 La sincronización alimenta el catálogo local usado por las tools MCP (`GetPrice`, `SearchAlternatives`, `CheckAvailability`).
 
 ---
