@@ -255,7 +255,7 @@ Implicaciones:
 
 ## 9. Day 1 validation script
 
-Exporta variables:
+Exporta variables. `ECOMMERCE_AUTH_HEADER` debe contener el header completo de autorización listo para pasar a `curl -H ...`, construido a partir del JWT técnico obtenido en `POST /api/v1/user/login`.
 
 ```bash
 export ECOMMERCE_BASE_URL="https://ecommerce.example.com"
