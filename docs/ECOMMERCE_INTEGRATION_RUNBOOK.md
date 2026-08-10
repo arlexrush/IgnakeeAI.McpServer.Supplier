@@ -260,7 +260,7 @@ Exporta variables. `ECOMMERCE_AUTH_HEADER` debe contener el header completo de a
 ```bash
 export ECOMMERCE_BASE_URL="https://ecommerce.example.com"
 export ECOMMERCE_JWT="<jwt>"
-export ECOMMERCE_AUTH_HEADER="<header Authorization construido con el JWT técnico>"
+export ECOMMERCE_AUTH_HEADER="Authorization: Bearer ${ECOMMERCE_JWT}"
 export SUPPLIER_BASE_URL="https://supplier.example.com"
 export SUPPLIER_ADMIN_API_KEY="<admin-api-key>"
 export SUPPLIER_MCP_API_KEY="<mcp-api-key>"
