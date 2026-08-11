@@ -1,9 +1,10 @@
-﻿using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
-using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
-using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce;
-using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
-using IgnakeeAI.McpServer.Supplier.Application.Contracts;
+﻿using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Erp;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace IgnakeeAI.McpServer.Supplier.Api
@@ -83,16 +84,37 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             {
                 if (file is null)
                     return Results.BadRequest(new { error = "Envía un archivo .xlsx en el form-data con key 'file'." });
+                
+                if (!CatalogUploadLimits.TryValidate(
+                        file,
+                        ".xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        out var validationError) ||
+                        !CatalogUploadLimits.IsSafeXlsx(file))
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = string.IsNullOrEmpty(validationError)
+                            ? "El archivo XLSX no es un paquete Open XML válido o supera los límites internos."
+                            : validationError
+                    });
+                }
 
                 var tempPath = Path.Combine(Path.GetTempPath(), $"catalog_{Guid.NewGuid()}.xlsx");
 
-                await using (var stream = new FileStream(tempPath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
                 try
                 {
+                    await using (var stream = new FileStream(
+                        tempPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None,
+                        bufferSize: 64 * 1024,
+                        useAsync: true))
+                    {
+                        await file.CopyToAsync(stream, cancellationToken);
+                    }
+
                     var startedAt = DateTimeOffset.UtcNow;
                     var count = await connector.ImportAsync(tempPath, cancellationToken);
                     await auditWriter.WriteAsync(
@@ -112,7 +134,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     File.Delete(tempPath);
                 }
             }).DisableAntiforgery()
-            .WithTags("Admin");
+            .WithTags("Admin")
+            .WithMetadata(new RequestSizeLimitAttribute(CatalogUploadLimits.MaxRequestBytes))
+            .RequireRateLimiting("AdminFileImport");
 
             /// <summary>
             /// POST /admin/sync/csv, importa un catálogo desde un archivo CSV (.csv). 
@@ -126,15 +150,30 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 if (file is null)
                     return Results.BadRequest(new { error = "Envía un archivo .csv en el form-data con key 'file'." });
 
-                var tempPath = Path.Combine(Path.GetTempPath(), $"catalog_{Guid.NewGuid()}.csv");
-
-                await using (var stream = new FileStream(tempPath, FileMode.Create))
+                if (!CatalogUploadLimits.TryValidate(
+                    file,
+                    ".csv",
+                    "text/csv",
+                    out var validationError))
                 {
-                    await file.CopyToAsync(stream);
+                    return Results.BadRequest(new { error = validationError });
                 }
 
+                var tempPath = Path.Combine(Path.GetTempPath(), $"catalog_{Guid.NewGuid()}.csv");
+                                
                 try
                 {
+                    await using (var stream = new FileStream(
+                        tempPath,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None,
+                        bufferSize: 64 * 1024,
+                        useAsync: true))
+                    {
+                        await file.CopyToAsync(stream, cancellationToken);
+                    }
+
                     var startedAt = DateTimeOffset.UtcNow;
                     var count = await connector.ImportAsync(tempPath, cancellationToken);
                     await auditWriter.WriteAsync(
@@ -154,7 +193,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     File.Delete(tempPath);
                 }
             }).DisableAntiforgery()
-            .WithTags("Admin");
+            .WithTags("Admin")
+            .WithMetadata(new RequestSizeLimitAttribute(CatalogUploadLimits.MaxRequestBytes))
+            .RequireRateLimiting("AdminFileImport");
 
             /// <summary>
             /// GET /admin/catalog/stats, devuelve estadísticas del catálogo, incluyendo el número total de productos activos, 
