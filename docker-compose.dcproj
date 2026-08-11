@@ -10,6 +10,7 @@
     <DockerServiceName>ignakeeai.mcpserver.supplier.api</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
     <None Include="CONTRIBUTING.md" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>

@@ -1,13 +1,17 @@
-﻿using IgnakeeAI.McpServer.Supplier.Infrastructure;
-using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
+﻿using IgnakeeAI.McpServer.Supplier.Api.Middleware;
+// Agregar los siguientes using para los tipos de autenticación personalizados
+using IgnakeeAI.McpServer.Supplier.Api.Security; // Ajusta el namespace según donde estén definidos los tipos
 using IgnakeeAI.McpServer.Supplier.Application.Contracts;
+using IgnakeeAI.McpServer.Supplier.Infrastructure;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration;
-using IgnakeeAI.McpServer.Supplier.Api.Middleware;
+using IgnakeeAI.McpServer.Supplier.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-// Agregar los siguientes using para los tipos de autenticación personalizados
-using IgnakeeAI.McpServer.Supplier.Api.Security; // Ajusta el namespace según donde estén definidos los tipos
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+
 
 
 namespace IgnakeeAI.McpServer.Supplier.Api
@@ -107,6 +111,38 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 });
             });
 
+
+
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = CatalogUploadLimits.MaxRequestBytes;
+            });
+
+
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.OnRejected = static (context, _) =>
+                {
+                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    return ValueTask.CompletedTask;
+                };
+
+                options.AddPolicy("AdminFileImport", context =>
+                {
+                    var clientId = context.User.FindFirst("client_id")?.Value ?? "anonymous";
+
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        clientId,
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 3,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
+                        });
+                });
+            });
+
             // ── 3. Health checks ─────────────────────────────────────────────────────
             builder.Services.AddHealthChecks();
 
@@ -114,43 +150,19 @@ namespace IgnakeeAI.McpServer.Supplier.Api
 
             if (!app.Environment.IsDevelopment())
             {
-                app.UseExceptionHandler("/error");
-            }
-
-            // ── Migración automática de la BD (controlada por configuración) ─────────
-            var applyMigrationsOnStartup = builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
-            if (applyMigrationsOnStartup)
-            {
-                using var scope = app.Services.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<SupplierCatalogDbContext>();
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-                var migrationStrategy = builder.Configuration.GetValue<string>("Database:MigrationStrategy", "auto"); // auto | manual | skip
-
-                if (migrationStrategy == "auto")
+                app.UseExceptionHandler(exceptionApp =>
                 {
-                    var maxAttempts = 5;
-                    for (int i = 1; i <= maxAttempts; i++)
-                    {
-                        try
-                        {
-                            await db.Database.MigrateAsync();
-                            logger.LogInformation("Migraciones aplicadas correctamente.");
-                            break;
-                        }
-                        catch (Exception ex) when (i < maxAttempts)
-                        {
-                            logger.LogWarning(ex, "Fallo migración intento {Attempt}/{Max}. Reintentando...", i, maxAttempts);
-                            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogCritical(ex, "Fallo definitivo en migración. El servidor arrancará sin migrar.");
-                            // NO re-throw: permitir que el servidor arranque para healthchecks
-                        }
-                    }
-                }
+                    exceptionApp.Run(context =>
+                        Results.Problem(
+                            statusCode: StatusCodes.Status500InternalServerError,
+                            title: "Error interno del servidor",
+                            detail: "Se produjo un error inesperado al procesar la solicitud.")
+                            .ExecuteAsync(context));
+                });
             }
+
+            // Las migraciones se aplican mediante un job de despliegue único,
+            // antes de iniciar o escalar las réplicas de la API.
 
             // Configuración de middlewares y endpoints
             app.UseCors("SupplierApiCors");
