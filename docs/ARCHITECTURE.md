@@ -1,36 +1,36 @@
-# Arquitectura ó IgnakeeAI MCP Supplier Server
+# Arquitectura ‚Äî IgnakeeAI MCP Supplier Server
 
-## 1. PropÛsito del sistema
+## 1. Prop√≥sito del sistema
 
-`IgnakeeAI.McpServer.Supplier` es el servicio que un proveedor despliega para que los agentes de Legio consulten su cat·logo mediante MCP. El proveedor conserva el control de sus datos, ERP y credenciales; Legio accede ˙nicamente a la interfaz MCP autorizada.
+`IgnakeeAI.McpServer.Supplier` es el servicio que un proveedor despliega para que los agentes de Legio consulten su cat√°logo mediante MCP. El proveedor conserva el control de sus datos, ERP y credenciales; Legio accede √∫nicamente a la interfaz MCP autorizada.
 
-Est· diseÒado para:
+Est√° dise√±ado para:
 
 - Exponer herramientas MCP para:
   - consulta de precio (`GetPrice`)
-  - b˙squeda de alternativas (`SearchAlternatives`)
+  - b√∫squeda de alternativas (`SearchAlternatives`)
   - disponibilidad (`CheckAvailability`)
-  - datos de atenciÛn (`GetBusinessHours`)
-- Centralizar informaciÛn de cat·logo desde m˙ltiples fuentes:
+  - datos de atenci√≥n (`GetBusinessHours`)
+- Centralizar informaci√≥n de cat√°logo desde m√∫ltiples fuentes:
   - base de datos local (principal)
-  - importaciÛn por `CSV`
-  - importaciÛn por `Excel`
-  - sincronizaciÛn desde ERP (`Odoo` o `SAP`)
-- Ofrecer una integraciÛn HTTP segura (`/mcp`) con salud del servicio (`/health`).
+  - importaci√≥n por `CSV`
+  - importaci√≥n por `Excel`
+  - sincronizaci√≥n desde ERP (`Odoo` o `SAP`)
+- Ofrecer una integraci√≥n HTTP segura (`/mcp`) con salud del servicio (`/health`).
 
-La frontera de confianza es explÌcita: Legio usa una credencial MCP con scopes de lectura y
-el proveedor usa una credencial administrativa separada para sincronizar el cat·logo.
+La frontera de confianza es expl√≠cita: Legio usa una credencial MCP con scopes de lectura y
+el proveedor usa una credencial administrativa separada para sincronizar el cat√°logo.
 
 ---
 
-## 2. Estilo arquitectÛnico
+## 2. Estilo arquitect√≥nico
 
 Se aplica una arquitectura por capas con enfoque puertos/adaptadores (hexagonal ligera):
 
 - **Dominio**: entidades y reglas derivadas (`CatalogProduct`, `EffectivePrice`, `DiscountPercent`).
-- **AplicaciÛn**: casos de uso y contratos (`CatalogSearchService`, `ICatalogRepository`, `ISupplierConfig`).
-- **Infraestructura**: persistencia EF Core, conectores ERP/CSV/Excel, configuraciÛn.
-- **Entrada MCP/API**: registro de tools MCP y exposiciÛn HTTP.
+- **Aplicaci√≥n**: casos de uso y contratos (`CatalogSearchService`, `ICatalogRepository`, `ISupplierConfig`).
+- **Infraestructura**: persistencia EF Core, conectores ERP/CSV/Excel, configuraci√≥n.
+- **Entrada MCP/API**: registro de tools MCP y exposici√≥n HTTP.
 
 ### 2.1 Vista de componentes
 
@@ -46,7 +46,7 @@ graph TD
     E --> D["SupplierCatalogDbContext"]
     D --> DB["SQLite / PostgreSQL / SQL Server / MySQL"]
     A --> AD["Admin Endpoints /admin/* (definidos)"]
-    AD --> X["Conectores de sincronizaciÛn"]
+    AD --> X["Conectores de sincronizaci√≥n"]
     X --> DB
 ```
 
@@ -67,9 +67,9 @@ SupplierCatalogDbContext
 ```
 
 El endpoint `/mcp` se autentica con una credencial de cliente MCP y scopes de
-lectura. Los endpoints `/admin/*` est·n separados y requieren rol
+lectura. Los endpoints `/admin/*` est√°n separados y requieren rol
 `supplier-admin`. CORS se limita mediante `Cors:AllowedOrigins` y no sustituye
-la autenticaciÛn.
+la autenticaci√≥n.
 
 ---
 
@@ -77,12 +77,12 @@ la autenticaciÛn.
 
 | Proyecto | Responsabilidad principal |
 |---|---|
-| `IgnakeeAI.McpServer.Supplier.Api` | Bootstrap del host, CORS, health checks, endpoint raÌz y mapeo MCP |
-| `IgnakeeAI.McpServer.Supplier.McpTools` | Herramientas MCP y serializaciÛn de respuestas |
-| `IgnakeeAI.McpServer.Supplier.Application` | OrquestaciÛn funcional de b˙squeda y contratos de puertos |
+| `IgnakeeAI.McpServer.Supplier.Api` | Bootstrap del host, CORS, health checks, endpoint ra√≠z y mapeo MCP |
+| `IgnakeeAI.McpServer.Supplier.McpTools` | Herramientas MCP y serializaci√≥n de respuestas |
+| `IgnakeeAI.McpServer.Supplier.Application` | Orquestaci√≥n funcional de b√∫squeda y contratos de puertos |
 | `IgnakeeAI.McpServer.Supplier.Domain` | Modelo de dominio y enums de criterio |
-| `IgnakeeAI.McpServer.Supplier.Infrastructure` | EF Core, repositorios, conectores, DI y configuraciÛn |
-| `IgnakeeAI.McpServer.Supplier.Tests` | pruebas unitarias/integraciÛn en memoria (especial foco Odoo y tools) |
+| `IgnakeeAI.McpServer.Supplier.Infrastructure` | EF Core, repositorios, conectores, DI y configuraci√≥n |
+| `IgnakeeAI.McpServer.Supplier.Tests` | pruebas unitarias/integraci√≥n en memoria (especial foco Odoo y tools) |
 
 ---
 
@@ -93,8 +93,8 @@ la autenticaciÛn.
 1. El cliente invoca tool MCP.
 2. `PricingTools` delega en `CatalogSearchService`.
 3. El servicio intenta:
-   - b˙squeda exacta por `itemCode`
-   - fallback por descripciÛn (tÈrminos tokenizados)
+   - b√∫squeda exacta por `itemCode`
+   - fallback por descripci√≥n (t√©rminos tokenizados)
 4. `ICatalogRepository` devuelve `CatalogProduct`.
 5. Se calcula precio efectivo (`EffectivePrice`) y se retorna `PriceResult` serializado a JSON.
 
@@ -120,7 +120,7 @@ sequenceDiagram
     P-->>U: JSON (found, unitPrice, contact...)
 ```
 
-## 4.2 B˙squeda de alternativas (`SearchAlternatives`)
+## 4.2 B√∫squeda de alternativas (`SearchAlternatives`)
 
 `CatalogSearchService` aplica estrategia por `SubstitutionCriteria`:
 
@@ -139,18 +139,18 @@ sequenceDiagram
 
     U->>A: SearchAlternatives(...)
     A->>S: SearchAlternativesAsync(...)
-    alt categorÌa no informada
+    alt categor√≠a no informada
         S->>R: InferCategoryAsync(terms)
     end
-    S->>R: Consulta seg˙n criterio
+    S->>R: Consulta seg√∫n criterio
     R-->>S: Lista CatalogProduct
     S-->>A: List<AlternativeMatch>
     A-->>U: JSON con alternatives + reason
 ```
 
-## 4.3 SincronizaciÛn de cat·logo (ERP/CSV/Excel)
+## 4.3 Sincronizaci√≥n de cat√°logo (ERP/CSV/Excel)
 
-Los conectores realizan upsert por `ItemCode` y persisten en cat·logo local.
+Los conectores realizan upsert por `ItemCode` y persisten en cat√°logo local.
 
 ```mermaid
 graph TD
@@ -158,28 +158,28 @@ graph TD
     S2 --> S3["Mapeo a CatalogProduct"]
     S3 --> S4["Upsert por ItemCode"]
     S4 --> S5["SupplierCatalogDbContext.SaveChanges"]
-    S5 --> S6["Cat·logo local disponible para tools MCP"]
+    S5 --> S6["Cat√°logo local disponible para tools MCP"]
 ```
 
 ---
 
-## 5. Modelo de dominio (n˙cleo)
+## 5. Modelo de dominio (n√∫cleo)
 
 Entidad central: `CatalogProduct`.
 
 Campos relevantes para decisiones de compra:
 
-- IdentificaciÛn: `ItemCode`, `Description`, `Category`, `Keywords`.
+- Identificaci√≥n: `ItemCode`, `Description`, `Category`, `Keywords`.
 - Precio/unidad: `UnitPrice`, `Currency`, `Unit`.
 - Oferta: `IsOnSale`, `SalePrice`, `ValidUntil`.
-- Calidad/sustituciÛn: `QualityRating`, `Specification`, `Presentation`, `IsSubstitute`.
-- LogÌstica: `AvailableStock`, `LeadTimeDays`.
+- Calidad/sustituci√≥n: `QualityRating`, `Specification`, `Presentation`, `IsSubstitute`.
+- Log√≠stica: `AvailableStock`, `LeadTimeDays`.
 - Formatos: `PackSize`, `PackPrice`.
 - Trazabilidad: `UpdatedAt`, `IsActive`, `ProductUrl`.
 
 Reglas derivadas:
 
-- `EffectivePrice`: usa `SalePrice` si est· activa oferta.
+- `EffectivePrice`: usa `SalePrice` si est√° activa oferta.
 - `DiscountPercent`: ahorro porcentual calculado.
 
 ---
@@ -195,20 +195,20 @@ Proveedor de BD configurable en runtime:
 - `sqlserver`
 - `mysql`
 
-ConfiguraciÛn en `DependencyInjection`:
+Configuraci√≥n en `DependencyInjection`:
 
 - lectura de `DatabaseProvider`
 - lectura de `ConnectionStrings:Catalog`
-- creaciÛn de `DbContext` seg˙n provider seleccionado.
+- creaci√≥n de `DbContext` seg√∫n provider seleccionado.
 
-Õndices definidos en `CatalogProductConfiguration`:
+√çndices definidos en `CatalogProductConfiguration`:
 
 - `ix_product_category_active` sobre `(Category, IsActive)`
 - `ix_product_itemcode` sobre `ItemCode`
 
 Migraciones:
 
-- se ejecutan autom·ticamente al iniciar el host (`db.Database.MigrateAsync()`).
+- se ejecutan autom√°ticamente al iniciar el host (`db.Database.MigrateAsync()`).
 
 ---
 
@@ -218,11 +218,11 @@ Migraciones:
 
 - Protocolo: JSON-RPC en `/jsonrpc`.
 - Flujo:
-  1. autenticaciÛn (`common.authenticate`)
+  1. autenticaci√≥n (`common.authenticate`)
   2. lectura (`product.product/search_read`)
   3. mapeo y persistencia local
 - Consideraciones:
-  - maneja valores `false` de Odoo para campos vacÌos
+  - maneja valores `false` de Odoo para campos vac√≠os
   - permite ampliar campos custom `x_*`.
 
 ## 7.2 SAP (`SapConnector`)
@@ -253,7 +253,7 @@ Tools registradas desde ensamblado `McpTools`:
 - `CheckAvailability(...)`
 - `GetBusinessHours()`
 
-La versiÛn de contrato es `1.0.0`. Los nombres son PascalCase y las respuestas
+La versi√≥n de contrato es `1.0.0`. Los nombres son PascalCase y las respuestas
 JSON se serializan en `camelCase`.
 
 Endpoint MCP:
@@ -264,27 +264,27 @@ Endpoint health:
 
 - `GET /health`.
 
-Endpoint raÌz informativo:
+Endpoint ra√≠z informativo:
 
 - `GET /` devuelve metadata del servidor y tools declaradas.
 
-`GET /health` comprueba MCP, tools, base de datos, cat·logo y migraciones.
+`GET /health` comprueba MCP, tools, base de datos, cat√°logo y migraciones.
 
-La ubicaciÛn operativa se configura mediante `Supplier:Location`, incluyendo
+La ubicaci√≥n operativa se configura mediante `Supplier:Location`, incluyendo
 latitud y longitud validadas. El servidor no calcula distancias ni selecciona
 proveedores; esas decisiones pertenecen a Legio/SmartRouting.
 
-La trazabilidad usa los headers `X-Legio-*` y registra ˙nicamente identificadores,
-versiÛn contractual, duraciÛn, ruta y estado. Nunca se registran API keys,
-contraseÒas, tokens ni connection strings.
+La trazabilidad usa los headers `X-Legio-*` y registra √∫nicamente identificadores,
+versi√≥n contractual, duraci√≥n, ruta y estado. Nunca se registran API keys,
+contrase√±as, tokens ni connection strings.
 
-Las sincronizaciones ERP, CSV y Excel actualizan el cat·logo local mediante
+Las sincronizaciones ERP, CSV y Excel actualizan el cat√°logo local mediante
 upsert por `ItemCode`; las tools MCP nunca consultan directamente los sistemas
 externos.
 
 ---
 
-## 9. ConfiguraciÛn operativa
+## 9. Configuraci√≥n operativa
 
 ## 9.1 `appsettings.json`
 
@@ -306,15 +306,15 @@ Consumidas por `SupplierConfig`:
 - `SUPPLIER_VENDOR_NAME`
 - `SUPPLIER_BUSINESS_HOURS`
 
-## 9.3 Frontera de integraciÛn con Legio
+## 9.3 Frontera de integraci√≥n con Legio
 
-La configuraciÛn de producciÛn separa dos identidades:
+La configuraci√≥n de producci√≥n separa dos identidades:
 
 - `ADMIN_API_KEY`: solo para operaciones del proveedor en `/admin/*`.
 - `MCP_CLIENT_ID` y `MCP_API_KEY`: identidad que Legio utiliza para `/mcp`.
 
-El Compose traduce estas variables a la configuraciÛn interna `Admin:ApiKey` y
-`Mcp:Clients:0`. Legio recibe ˙nicamente la URL HTTPS de `/mcp`, su identificador,
+El Compose traduce estas variables a la configuraci√≥n interna `Admin:ApiKey` y
+`Mcp:Clients:0`. Legio recibe √∫nicamente la URL HTTPS de `/mcp`, su identificador,
 su clave MCP y los scopes `catalog.read` y `availability.read`. La base de datos,
 los conectores ERP y los endpoints administrativos permanecen dentro de la
 infraestructura del proveedor.
@@ -507,13 +507,17 @@ Para produccion:
 
 ## 13. Riesgos y observaciones tecnicas actuales
 
-Observaciones detectadas en estado actual del codigo:
+Estado actual:
 
-1. `AdminCatalogEndPoint` esta implementado, pero no se observa llamado a `MapAdminCatalogEndpoints()` en `Program.cs`; por tanto, esos endpoints no quedarian expuestos hasta mapearse explicitamente.
-2. El `Dockerfile` referencia `COPY --from=publish` sin etapa `publish` declarada; la publicacion se ejecuta en la etapa `build`. Conviene corregir antes del release.
-3. `ISupplierConfig` define propiedades no-null, mientras `SupplierConfig` expone algunas como nullable; revisar para coherencia de nullability.
+- Los endpoints administrativos se registran desde `Program.cs`.
+- El Dockerfile publica desde la etapa `build`.
+- Las importaciones CSV/XLSX aplican l√≠mites de tama√±o, validaci√≥n de formato y
+  rate limiting por cliente autenticado.
+- Las migraciones de producci√≥n se ejecutan antes de arrancar o escalar la API,
+  mediante un paso de despliegue √∫nico.
 
-Estas observaciones no invalidan la arquitectura, pero si afectan operatividad/release si no se ajustan.
+Queda pendiente mantener la coherencia de nullability entre `ISupplierConfig`
+y `SupplierConfig`.
 
 ---
 
@@ -561,5 +565,5 @@ Estas observaciones no invalidan la arquitectura, pero si afectan operatividad/r
 
 ## 17. Resumen ejecutivo
 
-La soluciÛn est· preparada para operar como servidor MCP de proveedor en .NET 8, con arquitectura limpia, m˙ltiples fuentes de cat·logo y despliegue contenedorizado.  
-Para un despliegue productivo sÛlido, deben cerrarse los tres puntos del apartado de observaciones tÈcnicas y aplicar hardening de seguridad/operaciÛn.
+La soluci√≥n est√° preparada para operar como servidor MCP de proveedor en .NET 8, con arquitectura limpia, m√∫ltiples fuentes de cat√°logo y despliegue contenedorizado.  
+Para un despliegue productivo s√≥lido, deben cerrarse los tres puntos del apartado de observaciones t√©cnicas y aplicar hardening de seguridad/operaci√≥n.
