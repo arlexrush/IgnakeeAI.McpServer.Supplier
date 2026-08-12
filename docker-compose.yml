@@ -1,11 +1,15 @@
+name: ignakee-supplier-local
+
 services:
   ignakeeai.mcpserver.supplier.api:
     image: ${DOCKER_REGISTRY-}ignakeeaimcpserversupplierapi
     build:
       context: .
       dockerfile: src/IgnakeeAI.McpServer.Supplier.Api/Dockerfile
+    env_file:
+      - ${COMPOSE_ENV_FILE:-.env.develop}
     ports:
-      - "5100:5100"
+      - "${SUPPLIER_HOST_PORT:-5100}:5100"
     environment:
       ASPNETCORE_URLS: http://+:5100
       

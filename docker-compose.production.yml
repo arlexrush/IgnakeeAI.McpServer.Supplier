@@ -2,6 +2,8 @@ services:
   api:
     image: ghcr.io/arlexrush/mcp-supplier-server:${IMAGE_TAG:?IMAGE_TAG is required}
     restart: unless-stopped
+    env_file:
+      - ${COMPOSE_ENV_FILE:-.env.production}
     ports:
       - "5100:5100"
     environment:

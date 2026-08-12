@@ -29,17 +29,19 @@ Legio nunca necesita acceso directo a la base de datos ni a las credenciales del
 ## 3. Configuración local
 
 ```powershell
-Copy-Item .env.example .env
-notepad .env
-docker compose -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
+Copy-Item .env.example .env.develop
+notepad .env.develop
+docker compose --env-file .env.develop -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
 ```
 
 La API local queda disponible en `http://localhost:5100`.
 
+Los stacks de `staged` y `master` corresponden a servidores Hetzner distintos. Si uno ocupa el puerto local `5100`, configura `SUPPLIER_HOST_PORT=5101` en `.env.develop`, añade `--env-file .env.develop` al comando de Compose y usa `http://localhost:5101` para el stack local.
+
 Para PostgreSQL local:
 
 ```powershell
-docker compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
+docker compose --env-file .env.develop -f docker-compose.yml -f docker-compose.override.yml up --build -d
 ```
 
 ## 4. Variables de autenticación
