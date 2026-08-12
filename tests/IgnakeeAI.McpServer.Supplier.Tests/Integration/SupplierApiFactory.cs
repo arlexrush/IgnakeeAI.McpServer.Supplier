@@ -56,6 +56,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Integration
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Database:ApplyMigrationsOnStartup"] = "false",
+                    ["RateLimiting:AdminFileImport:PermitLimit"] = "100",
                     ["DatabaseProvider"] = "sqlite",
                     // ["ConnectionStrings:Catalog"] = $"Data Source=:memory:;Cache=Shared;Mode=Memory",
                     // ["ConnectionStrings:Catalog"] = "Data Source=:memory:",
