@@ -19,5 +19,6 @@
     <None Include="docker-compose.sqlite.yml" />
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+    <None Include="docs\POSTGRESQL_RESET.md" />
   </ItemGroup>
 </Project>

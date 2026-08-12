@@ -2,9 +2,16 @@ name: CI - Build & Test
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop, staged, master]
   pull_request:
-    branches: [main]
+    branches: [develop, staged, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -16,7 +23,7 @@ jobs:
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
       - name: Restore dependencies
         run: dotnet restore IgnakeeAI.McpServer.Supplier.sln

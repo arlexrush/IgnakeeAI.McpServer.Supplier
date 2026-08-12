@@ -36,15 +36,18 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución", "Elementos de la solución", "{D107F4C8-89CC-BEA8-D3D7-CA6B7733353D}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.env.develop = .env.develop
 		.env.example = .env.example
 		.env.production = .env.production
+		.env.staged = .env.staged
 		LICENSE.txt = LICENSE.txt
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{850726CD-BF3E-4ADF-8734-20B211D3C689}"
 	ProjectSection(SolutionItems) = preProject
-		github\workflows\release.yml = github\workflows\release.yml
+		.github\workflows\ci.yml = .github\workflows\ci.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SAP", "SAP", "{814A97D0-14BF-4871-8316-EF4EA4DA223D}"

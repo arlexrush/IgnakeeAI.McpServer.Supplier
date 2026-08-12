@@ -49,17 +49,20 @@ By submitting a contribution, you agree that:
 5. Add or update tests covering your changes.
 6. Sign the CLA in your PR description (see above).
 7. Open the Pull Request targeting the `develop` branch.
-8. **Do not open PRs directly against `main`** — they will be closed without review.
+8. **Do not open PRs directly against `staged` or `master`** — only the maintainer promotes validated changes.
 
 ---
 ## Branch Strategy
 
-| Branch       | Purpose                                               |
-|--------------|-------------------------------------------------------|
-| `main`       | Stable releases only. Merge restricted to maintainer. |
-| `develop`    | Integration branch. All PRs target this branch.       |
-| `feature/*`  | Feature development. Created from `develop`.          |
-| `fix/*`      | Bug fixes. Created from `develop`.                    |
+| Branch       | Purpose                                                               |
+|--------------|-----------------------------------------------------------------------|
+| `develop`    | Integration and local development. Exposed with ngrok when required. |
+| `staged`     | Preproduction on Hetzner. Receives promotions from `develop`.        |
+| `master`     | Production on Hetzner. Receives validated promotions from `staged`.  |
+| `feature/*`  | Feature development. Created from `develop`.                          |
+| `fix/*`      | Bug fixes. Created from `develop`.                                    |
+
+Promotion flow: `feature/*` or `fix/*` → `develop` → `staged` → `master`.
 
 ---
 
@@ -68,7 +71,7 @@ By submitting a contribution, you agree that:
 - The maintainer reviews all PRs. There is **no guaranteed response time**.
 - A PR may be closed if it does not align with the project roadmap, even if technically correct.
 - The maintainer may request changes, split a PR, or incorporate the idea independently.
-- **Only the maintainer merges to `main`** after final validation.
+- **Only the maintainer promotes to `staged` and merges to `master`** after final validation.
 
 ---
 

@@ -277,16 +277,14 @@ Suites incluidas:
 
 | Pipeline        | Activación                            | Acción                                 |
 |-----------------|---------------------------------------|----------------------------------------|
-| `ci.yml`        | push a `main`/`develop` o PR a `main` | restore → build → test                 |
-| `release.yml`   | push de tag `v*` (ej. `v1.0.0`)       | build imagen multi-arch → push a GHCR  |
+| `ci.yml`        | push o PR a `develop`, `staged` o `master` | restore → build → test             |
+| `release.yml`   | push a `develop`, `staged` o `master` | build multi-arch → push a GHCR; despliega en Hetzner sólo desde `staged` y `master` |
 
-### Publicar una nueva versión
-git tag v1.0.1
-git push origin v1.0.1
+### Promoción de cambios
 
+`feature/*` y `fix/*` se integran en `develop`, que se ejecuta localmente y se expone temporalmente mediante ngrok. Tras validarlo, se promociona mediante Pull Request a `staged`, desplegado en Hetzner como preproducción, y finalmente a `master`, desplegado en Hetzner como producción.
 
-La imagen queda disponible en:
-`ghcr.io/arlexrush/mcp-supplier-server:1.0.0` y `ghcr.io/arlexrush/mcp-supplier-server:latest`.
+Cada ejecución publica una imagen inmutable con etiqueta `sha-<commit>`. Las etiquetas de rama (`develop`, `staged`, `master`) son de conveniencia y `latest` sólo se actualiza desde `master`.
 
 
 Guía completa: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
@@ -302,6 +300,7 @@ Guía completa: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md)      | Contrato MCP: parámetros y esquemas de respuesta de cada tool                    |
 | [`docs/ERP_INTEGRATION.md`](docs/ERP_INTEGRATION.md)  | Manual de integración con Odoo, SAP, CSV y Excel                                 |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)            | Despliegue local, en contenedor y CI/CD                                          |
+| [`docs/POSTGRESQL_RESET.md`](docs/POSTGRESQL_RESET.md) | Cambio de credenciales y reinicialización de PostgreSQL por entorno              |
 | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)  | Guía de inicio rápido                                                            |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)                  | Cómo contribuir al proyecto y CLA                                                |
 

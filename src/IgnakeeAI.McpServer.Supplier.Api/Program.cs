@@ -161,9 +161,6 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 });
             }
 
-            // Las migraciones se aplican mediante un job de despliegue único,
-            // antes de iniciar o escalar las réplicas de la API.
-
             // Configuración de middlewares y endpoints
             app.UseCors("SupplierApiCors");
             app.UseMiddleware<LegioCorrelationMiddleware>();
