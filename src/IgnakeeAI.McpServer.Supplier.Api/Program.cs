@@ -168,6 +168,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             app.UseCors("SupplierApiCors");
             app.UseMiddleware<LegioCorrelationMiddleware>();
             app.UseAuthentication();
+            app.UseRateLimiter();
             app.UseAuthorization();
             // Se mantiene temporalmente la autorización a nivel de transporte.
             // La granularidad por herramienta se habilitará con el filtro de autorización
