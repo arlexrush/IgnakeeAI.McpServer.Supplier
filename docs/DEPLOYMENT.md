@@ -6,6 +6,8 @@ Este documento guía a un proveedor desde la instalación hasta la integración 
 con los agentes de **Legio**, el cliente MCP. Incluye el flujo de CI/CD y la publicación
 de la imagen Docker en GHCR.
 
+Para cambiar credenciales de PostgreSQL o recrear una base ya inicializada, consulta el manual para principiantes: [`POSTGRESQL_RESET.md`](POSTGRESQL_RESET.md).
+
 ---
 
 ## 2. Herramientas necesarias
@@ -29,13 +31,21 @@ de la imagen Docker en GHCR.
 - Variables de entorno cargadas desde `.env` o `appsettings.Development.json`.
 - Puerto de escucha: `5100`.
 - Base de datos: `catalog.dev.db` (local, en disco).
-- Ideal para desarrollo y validación local antes de promover a producción.
+- La API se ejecuta en el equipo de desarrollo y se expone temporalmente mediante ngrok.
+- No hay despliegue SSH ni servidor Hetzner asociado a esta rama.
 
-### 3.2 Production
+### 3.2 Staging
+
+- Preproducción desplegada en un servidor Hetzner independiente.
+- ASP.NET Core usa `ASPNETCORE_ENVIRONMENT=Staging`.
+- Variables privadas en `.env.staged`, almacenado sólo en el servidor Hetzner.
+- Se despliega automáticamente al promocionar `develop` a `staged`.
+
+### 3.3 Production
 
 - Base de datos recomendada: PostgreSQL (o SQL Server según infraestructura).
 - Variables sensibles gestionadas como secretos externos o variables del sistema.
-- Imagen publicada en GHCR y desplegada como contenedor.
+- Producción desplegada en un servidor Hetzner independiente con `ASPNETCORE_ENVIRONMENT=Production`.
 - Puerto de escucha: `5100` (mapeado desde host según entorno).
 - TLS/HTTPS gestionado por Ingress o Reverse Proxy externo (Nginx, Traefik, etc.).
 
@@ -54,7 +64,8 @@ de la imagen Docker en GHCR.
   que tienen mayor prioridad que los ficheros `appsettings.json`.
 
 En desarrollo local, `appsettings.Development.json` y `.env.example` contienen valores
-de prueba para una integración Legio. Deben sustituirse por secretos externos en producción.
+de prueba para una integración Legio. Los ficheros `.env.staged` y `.env.production` se
+crean y mantienen exclusivamente en sus servidores Hetzner; no deben confirmarse en Git.
 
 ### 4.2 Variables de entorno clave
 
@@ -65,7 +76,7 @@ cp .env.example .env
 
 | Variable                     | Entorno          |Descripción                                   |
 |------------------------------|------------------|----------------------------------------------|
-| `ASPNETCORE_ENVIRONMENT`     | ambos            | `Development` o `Production`                 |
+| `ASPNETCORE_ENVIRONMENT`     | todos            | `Development`, `Staging` o `Production`      |
 | `DatabaseProvider`           | ambos            | `sqlite`, `postgresql`, `sqlserver`, `mysql` |
 | `ConnectionStrings__Catalog` | ambos            | Cadena de conexión a la BD                   |
 | `POSTGRES_DB`                | producción       | Nombre de la base de datos PostgreSQL        |
@@ -129,8 +140,18 @@ Verificar:
 
 curl http://localhost:5100/health curl http://localhost:5100/
 
+### 5.2 Exponer Development con ngrok
 
-### 5.2 Opción B: Docker Compose con SQLite (recomendado para desarrollo)
+Con la API local en ejecución, inicia el túnel HTTP hacia el puerto local:
+
+```powershell
+ngrok http 5100
+```
+
+Usa la URL HTTPS generada por ngrok seguida de `/mcp` para las pruebas de integración. El token de ngrok se configura localmente con `ngrok config add-authtoken` y nunca se guarda en Git, `.env.develop` ni GitHub Actions.
+
+
+### 5.3 Opción B: Docker Compose con SQLite (recomendado para desarrollo)
 docker compose -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
 
 #### Verificar que el contenedor está corriendo
@@ -146,7 +167,7 @@ docker compose -f docker-compose.yml -f docker-compose.sqlite.yml --profile sqli
 Abrir en navegador: http://localhost:8081
 
 
-### 5.3 Opción C: Docker Compose con PostgreSQL
+### 5.4 Opción C: Docker Compose con PostgreSQL
 
 En producción, la API exige `DatabaseProvider=postgresql` (o `postgres`) y no
 permite iniciar accidentalmente con SQLite. El compose de PostgreSQL establece
@@ -172,7 +193,7 @@ El `healthcheck` de PostgreSQL usa los mismos valores por defecto que el servici
 (`supplier_catalog` y `supplier_user`) y acepta los valores personalizados de
 `.env`; así `depends_on` no libera la API hasta que PostgreSQL esté listo.
 
-### 5.4 Producción con el compose endurecido
+### 5.5 Staging y Production con el compose de Hetzner
 
 El fichero `docker-compose.production.yml` no contiene secretos y exige que se
 definan antes de arrancar:
@@ -180,18 +201,22 @@ definan antes de arrancar:
 ```powershell
 Copy-Item .env.example .env.production
 notepad .env.production
+$env:IMAGE_TAG = 'sha-<commit>'
+$env:ASPNETCORE_ENVIRONMENT = 'Production'
 docker compose --env-file .env.production -f docker-compose.production.yml config
 docker compose --env-file .env.production -f docker-compose.production.yml up -d
 ```
 
-En `.env.production` se deben sustituir, como mínimo, `POSTGRES_PASSWORD`,
-`ADMIN_API_KEY`, `MCP_CLIENT_ID`, `MCP_API_KEY` y los datos reales del proveedor.
-El fichero debe permanecer fuera de Git. El comando `config` valida la
-interpolación sin iniciar contenedores.
+Para Staging, usa `.env.staged` y establece `ASPNETCORE_ENVIRONMENT` en `Staging`.
+`IMAGE_TAG` debe ser la etiqueta inmutable `sha-<commit>` publicada por el run de
+GitHub Actions que se desea desplegar. En ambos ficheros se deben sustituir, como
+mínimo, `POSTGRES_PASSWORD`, `ADMIN_API_KEY`, `MCP_CLIENT_ID`, `MCP_API_KEY` y los
+datos reales del proveedor. Los ficheros permanecen fuera de Git. El comando
+`config` valida la interpolación sin iniciar contenedores.
 
 #### Verificar salud del servicio
-- docker compose ps
-- curl http://localhost:5100/health
+- `docker compose --env-file .env.production -f docker-compose.production.yml ps`
+- `curl http://localhost:5100/health`
 
 
 ---
@@ -231,8 +256,8 @@ El proyecto tiene dos pipelines definidos en `.github/workflows/`:
 **Archivo:** `.github/workflows/ci.yml`
 
 **Cuándo se ejecuta:**
-- En cada `push` a las ramas `main` o `develop`.
-- En cada `pull_request` hacia `main`.
+- En cada `push` a las ramas `develop`, `staged` o `master`.
+- En cada `pull_request` hacia `develop`, `staged` o `master`.
 
 **Pasos del pipeline:**
 
@@ -255,15 +280,18 @@ checkout → setup .NET 8 → dotnet restore → dotnet build -c Release → dot
 **Archivo:** `.github/workflows/release.yml`
 
 **Cuándo se ejecuta:**
-- En cada `push` de un **tag** con prefijo `v` (ejemplos: `v1.0.0`, `v2.3.1`).
+- En cada `push` a `develop`, `staged` o `master`.
 
 **Pasos del pipeline:**
 
-checkout → setup Docker Buildx → login GHCR → extraer versión del tag → build & push imagen multi-arquitectura (amd64 + arm64)
+checkout → quality gate → setup Docker Buildx → login GHCR → build & push imagen multi-arquitectura (amd64 + arm64).
+
+En `develop` termina tras la publicación de la imagen: la aplicación se ejecuta localmente y se expone con ngrok. En `staged` y `master`, el job `deploy` se conecta por SSH al servidor Hetzner del GitHub Environment correspondiente y ejecuta Docker Compose.
 
 **Imágenes publicadas en GHCR:**
-ghcr.io/arlexrush/mcp-supplier-server:1.0.0   ← versión exacta
-ghcr.io/arlexrush/mcp-supplier-server:latest  ← última versión
+ghcr.io/arlexrush/mcp-supplier-server:sha-<commit>  ← imagen inmutable desplegada
+ghcr.io/arlexrush/mcp-supplier-server:<rama>         ← etiqueta de conveniencia
+ghcr.io/arlexrush/mcp-supplier-server:latest         ← sólo desde `master`
 
 
 **Autenticación con GHCR:**
@@ -271,26 +299,22 @@ ghcr.io/arlexrush/mcp-supplier-server:latest  ← última versión
 
 ---
 
-## 8. Crear y publicar un release (paso a paso)
+## 8. Promover cambios (paso a paso)
 
 ### Paso 1 — Asegurarse de que CI está en verde
 
 Verificar estado en GitHub: Actions → CI - Build & Test → último run = success
 
 
-### Paso 2 — Crear un tag de versión
+### Paso 2 — Promover por ramas
 
-Desde la rama main (asegurarse de estar actualizado)
-git checkout main git pull origin main
-
-Crear tag de versión semántica
-git tag v1.0.0
-
-Publicar el tag (esto dispara el pipeline release.yml)
-git push origin v1.0.0
+1. Integrar cambios funcionales en `develop` mediante Pull Request. Probar localmente y, si se requiere acceso externo, iniciar `ngrok http 5100`.
+2. Crear Pull Request de `develop` a `staged`. Al completar el quality gate, GitHub Actions despliega la imagen por SHA en el servidor Hetzner de preproducción.
+3. Validar `/health` y las herramientas MCP en Staging.
+4. Crear Pull Request de `staged` a `master`. Al completar el quality gate, GitHub Actions despliega la misma confirmación promocionada en el servidor Hetzner de producción.
 
 
-### Paso 3 — Verificar el pipeline de release
+### Paso 3 — Verificar el pipeline de CD
 
 En GitHub:
 Repositorio → Actions → Release - Docker Image → verificar que completa sin errores
@@ -300,9 +324,7 @@ Repositorio → Actions → Release - Docker Image → verificar que completa si
 Repositorio → Packages → `mcp-supplier-server`
 
 
-O desde terminal:
-docker pull ghcr.io/arlexrush/mcp-supplier-server:1.0.0
-docker pull ghcr.io/arlexrush/mcp-supplier-server:latest
+La imagen concreta desplegada se identifica mediante la etiqueta `sha-<commit>` del run de GitHub Actions.
 
 
 ---
@@ -346,34 +368,49 @@ SUPPLIER_BUSINESS_HOURS=Lun-Vie 08:00-18:00
 ADMIN_API_KEY=<clave-solo-para-el-proveedor>
 MCP_CLIENT_ID=legio-production
 MCP_API_KEY=<clave-que-se-entregara-a-legio>
-Mcp__ContractVersion=1.0.0
-Mcp__ProtocolVersion=2025-03-26
+MCP_CONTRACT_VERSION=1.0.0
+MCP_PROTOCOL_VERSION=2025-03-26
 ```
 
 Si se utiliza un ERP, añade `Erp__Provider` y las credenciales correspondientes. El fichero debe permanecer fuera de Git.
 
 ### 9.3 Descargar y levantar la imagen
 
-La imagen publicada por GitHub Actions es:
+La imagen desplegada por GitHub Actions se identifica por el SHA del commit:
 
 ```text
-ghcr.io/arlexrush/mcp-supplier-server:<version>
+ghcr.io/arlexrush/mcp-supplier-server:sha-<commit>
 ghcr.io/arlexrush/mcp-supplier-server:latest
 ```
 
 Valida primero la interpolación y después inicia los servicios:
 
 ```powershell
+$env:IMAGE_TAG = 'sha-<commit-del-run-de-GitHub-Actions>'
+$env:ASPNETCORE_ENVIRONMENT = 'Production'
 docker compose --env-file .env.production -f docker-compose.production.yml config
 docker compose --env-file .env.production -f docker-compose.production.yml pull
 docker compose --env-file .env.production -f docker-compose.production.yml up -d
 ```
 
-El Compose de producción utiliza PostgreSQL y espera a que su healthcheck esté listo antes de iniciar la API. La API escucha en el puerto `5100`; en una instalación pública debe quedar detrás de HTTPS mediante un reverse proxy.
+Para Staging, usa `.env.staged` y `ASPNETCORE_ENVIRONMENT='Staging'`. El Compose utiliza PostgreSQL y espera a que su healthcheck esté listo antes de iniciar la API. La API escucha en el puerto `5100`; en una instalación pública debe quedar detrás de HTTPS mediante un reverse proxy.
 
-### 9.4 Verificación y conexión de Legio
+### 9.4 Mantenimiento manual de PostgreSQL
+
+Ejecuta estos comandos en el servidor Hetzner y dentro de `DEPLOY_PATH`, con el stack ya iniciado. Aunque se opere sólo sobre `postgres`, Compose evalúa también el servicio `api`; por ello se debe proporcionar una etiqueta no vacía y el entorno. La etiqueta `maintenance` no altera los contenedores existentes porque `exec` no recrea servicios.
 
 ```powershell
+$env:IMAGE_TAG = 'maintenance'
+$env:ASPNETCORE_ENVIRONMENT = 'Staging'
+docker compose --env-file .env.staged -f docker-compose.production.yml exec postgres sh -lc 'psql -U "$POSTGRES_USER" -d postgres'
+```
+
+Para Production, sustituye `.env.staged` por `.env.production` y establece `ASPNETCORE_ENVIRONMENT` en `Production`. El nombre de usuario y de base de datos se leen dentro del contenedor, evitando copiar credenciales a la línea de comandos.
+
+### 9.5 Verificación y conexión de Legio
+
+```powershell
+# Reutiliza IMAGE_TAG y ASPNETCORE_ENVIRONMENT definidos en la sesión anterior.
 docker compose --env-file .env.production -f docker-compose.production.yml ps
 Invoke-WebRequest http://localhost:5100/health
 Invoke-WebRequest http://localhost:5100/
@@ -389,14 +426,14 @@ El proveedor entrega a Legio únicamente:
 
 No entregue a Legio `ADMIN_API_KEY`, contraseñas PostgreSQL ni credenciales ERP.
 
-### 9.5 Actualizar una versión
+### 9.6 Actualizar el servicio
 
-El pipeline publica una imagen versionada y `latest` cuando se envía un tag `v*`. Para actualizar de forma controlada, use la etiqueta versionada:
+La promoción a `master` despliega automáticamente la imagen inmutable `sha-<commit>` generada por el pipeline. No modifiques manualmente la etiqueta de imagen en el servidor; valida el run de GitHub Actions y comprueba el servicio tras el despliegue.
 
 ```powershell
-docker pull ghcr.io/arlexrush/mcp-supplier-server:1.0.1
-# Actualizar image en docker-compose.production.yml a :1.0.1
-docker compose --env-file .env.production -f docker-compose.production.yml up -d --no-deps api
+# Reutiliza IMAGE_TAG y ASPNETCORE_ENVIRONMENT definidos en la sesión anterior.
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 api
 ```
 
 Comprueba `/health` y las tools MCP antes de comunicar la actualización a Legio.
@@ -462,6 +499,7 @@ curl -X POST http://localhost:5100/mcp
 -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"GetPrice","arguments":{"itemDescription":"cemento","currency":"EUR"}}}'
 
 7. Logs y estado de contenedores
+# Reutiliza IMAGE_TAG y ASPNETCORE_ENVIRONMENT definidos para el entorno consultado.
 docker compose --env-file .env.production -f docker-compose.production.yml ps
 docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 api postgres
 
@@ -470,28 +508,23 @@ docker compose --env-file .env.production -f docker-compose.production.yml logs 
 
 ## 12. Secrets de GitHub Actions (configuración requerida)
 
-Para que el pipeline `release.yml` funcione, no se requiere configuración adicional:
-`GITHUB_TOKEN` es un secreto automático provisto por GitHub Actions.
+`GITHUB_TOKEN` es un secreto automático usado para publicar en GHCR. El despliegue SSH requiere secretos de entorno sólo para `staged` y `production`; `develop` no usa secretos de despliegue porque se ejecuta localmente mediante ngrok.
 
-Para pipelines más avanzados (ej. despliegue automático al servidor de producción),
-se pueden añadir secrets adicionales en:
+Configúralos en **Settings → Environments → staged/production → Environment secrets**. Cada entorno debe tener valores propios para su servidor Hetzner:
 
-Repositorio GitHub → Settings → Secrets and variables → Actions → New repository secret
-
-
-Ejemplos de secrets adicionales:
 | Secret                   | Descripción                                            |
 |--------------------------|--------------------------------------------------------|
-| `PROD_SSH_KEY`           | Clave SSH para acceso al servidor de producción        |
-| `PROD_HOST`              | IP o hostname del servidor de producción               |
-| `PROD_POSTGRES_PASSWORD` | Contraseña de PostgreSQL en producción                 |
-| `ERP_ODOO_PASSWORD`      | Contraseña del usuario ERP Odoo                        |
+| `DEPLOY_HOST`            | IP o FQDN del servidor Hetzner, sin usuario ni esquema |
+| `DEPLOY_USER`            | Usuario Linux dedicado al despliegue con acceso a Docker |
+| `DEPLOY_PATH`            | Ruta absoluta que contiene Compose y el `.env` privado |
+| `DEPLOY_SSH_KEY`         | Clave privada SSH del usuario de despliegue            |
+| `SSH_KNOWN_HOSTS`        | Clave pública del host en formato `known_hosts`, verificada |
+
+Los ficheros `.env.staged` y `.env.production` se crean directamente en sus respectivos servidores, dentro de `DEPLOY_PATH`. Contienen credenciales de aplicación y no se transfieren desde GitHub Actions.
 
 ---
 
 ## 13. Resumen del flujo CI/CD completo
 
-Developer │ 
-          ├─► push a develop / PR a main │       
-		  └─► CI: restore → build → test │                  
+`feature/*` o `fix/*` → Pull Request a `develop` → validación local y ngrok → Pull Request a `staged` → despliegue SSH en Hetzner de preproducción → Pull Request a `master` → despliegue SSH en Hetzner de producción.
 

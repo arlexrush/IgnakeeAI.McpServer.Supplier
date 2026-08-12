@@ -44,8 +44,8 @@ packages/
 # Entorno y secretos
 # ============================================================
 .env
+.env.*
 !.env.example
-.env.production
 *.env.local
 *.env.*.local
 appsettings.Local.json
