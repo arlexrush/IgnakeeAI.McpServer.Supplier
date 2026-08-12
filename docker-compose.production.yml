@@ -8,7 +8,6 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5100
       DatabaseProvider: postgresql
-      Database__ApplyMigrationsOnStartup: ${DATABASE_APPLY_MIGRATIONS_ON_STARTUP:-true}
       ConnectionStrings__Catalog: Host=postgres;Port=5432;Database=${POSTGRES_DB:?POSTGRES_DB is required};Username=${POSTGRES_USER:?POSTGRES_USER is required};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       Admin__ApiKey: ${ADMIN_API_KEY:?ADMIN_API_KEY is required}
       Mcp__ContractVersion: ${MCP_CONTRACT_VERSION:-1.0.0}
