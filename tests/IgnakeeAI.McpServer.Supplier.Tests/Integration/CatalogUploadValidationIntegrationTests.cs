@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace IgnakeeAI.McpServer.Supplier.Tests.Integration;
