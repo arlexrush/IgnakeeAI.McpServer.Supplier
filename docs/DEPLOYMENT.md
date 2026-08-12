@@ -163,10 +163,14 @@ Configurar credenciales en .env:
 #### Construir y levantar servicios
 - docker compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
 
-Las migraciones EF Core se aplican al arrancar la API mediante
-`Database.MigrateAsync()`. Para despliegues con migraciones gestionadas fuera de
-la aplicación, establecer `Database__ApplyMigrationsOnStartup=false` y ejecutar
-la actualización contra PostgreSQL antes de levantar la API.
+Aplica las migraciones de forma controlada antes de levantar o escalar la API:
+
+```powershell
+$env:ConnectionStrings__Catalog = 'Host=postgres;Port=5432;Database=...;Username=...;Password=...'
+./scripts/migrate-production.ps1
+```
+
+La API no ejecuta migraciones al arrancar.
 
 El `healthcheck` de PostgreSQL usa los mismos valores por defecto que el servicio
 (`supplier_catalog` y `supplier_user`) y acepta los valores personalizados de
@@ -406,27 +410,16 @@ Comprueba `/health` y las tools MCP antes de comunicar la actualización a Legio
 
 ## 10. Migraciones de base de datos
 
-Las migraciones se aplican **automáticamente** al iniciar la API cuando la clave de
-configuración `Database:ApplyMigrationsOnStartup` está en `true` (valor por defecto).
+Las migraciones se ejecutan explícitamente antes del despliegue, con una sola
+instancia y usando la misma cadena de conexión que producción:
 
-{ "Database": { "ApplyMigrationsOnStartup": true } }
+```powershell
+$env:ConnectionStrings__Catalog = 'Host=postgres;Port=5432;Database=...;Username=...;Password=...'
+./scripts/migrate-production.ps1
+```
 
-
-**Comportamiento:**
-- Al arrancar el contenedor, `Program.cs` llama a `db.Database.MigrateAsync()`.
-- Si la base de datos no existe (primera vez), se crea y se aplican todas las migraciones.
-- Si ya existe, solo se aplican las migraciones pendientes.
-
-**Para desactivar migraciones automáticas** (útil si se gestionan manualmente):
-
-{ "Database": { "ApplyMigrationsOnStartup": false } }
-
-
-Ejecutar migraciones manualmente:
-dotnet ef database update 
---project src/IgnakeeAI.McpServer.Supplier.Infrastructure 
---startup-project src/IgnakeeAI.McpServer.Supplier.Api
-
+No inicies ni escales la API hasta que este paso termine correctamente. La
+aplicación no aplica migraciones al arrancar.
 
 ---
 
