@@ -119,6 +119,10 @@ namespace IgnakeeAI.McpServer.Supplier.Api
             });
 
 
+            var adminImportPermitLimit = Math.Max(
+                1,
+                builder.Configuration.GetValue<int>("RateLimiting:AdminFileImport:PermitLimit", 3));
+
             builder.Services.AddRateLimiter(options =>
             {
                 options.OnRejected = static (context, _) =>
@@ -136,7 +140,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                         _ => new FixedWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 3,
+                            PermitLimit = adminImportPermitLimit,
                             Window = TimeSpan.FromMinutes(1),
                             QueueLimit = 0
                         });
