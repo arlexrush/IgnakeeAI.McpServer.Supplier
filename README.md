@@ -160,7 +160,7 @@ Para una integración con Legio, configura como mínimo `MCP_CLIENT_ID`, `MCP_AP
 | `EcommerceInventory__CatalogSyncPath` | Ruta del catálogo paginado                       | `/api/v1/inventory`                              |
 | `EcommerceInventory__SyncPageSize` | Tamaño de página seguro para sync                    | `50`                                             |
 
-Las migraciones de base de datos se aplican automáticamente al arrancar (`ApplyMigrationsOnStartup: true`).
+En producción, aplica las migraciones de forma controlada antes de iniciar o escalar la API: `./scripts/migrate-production.ps1`. La aplicación no ejecuta migraciones al arrancar.
 
 > Si ejecutas el proceso fuera de Docker Compose, usa las claves runtime `Admin__ApiKey`, `Mcp__Clients__0__ClientId` y `Mcp__Clients__0__ApiKey`. Los nombres `ADMIN_API_KEY`, `MCP_CLIENT_ID` y `MCP_API_KEY` del `.env.example` son alias prácticos para `docker-compose.production.yml`.
 
@@ -277,7 +277,7 @@ Suites incluidas:
 
 | Pipeline        | Activación                            | Acción                                 |
 |-----------------|---------------------------------------|----------------------------------------|
-| `ci.yml`        | push a `main`/`develop` o PR a `main` | restore → build → test                 |
+| `ci.yml`        | push a `master`/`main`/`develop` o PR a `master`/`main` | restore → build → test |
 | `release.yml`   | push de tag `v*` (ej. `v1.0.0`)       | build imagen multi-arch → push a GHCR  |
 
 ### Publicar una nueva versión
