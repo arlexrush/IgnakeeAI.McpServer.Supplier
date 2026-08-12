@@ -109,8 +109,8 @@ Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 git clone https://github.com/arlexrush/IgnakeeAI.McpServer.Supplier.git
 cd IgnakeeAI.McpServer.Supplier
-Copy-Item .env.example .env
-docker compose -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
+Copy-Item .env.example .env.develop
+docker compose --env-file .env.develop -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
 
 
 ### Opción B — .NET CLI
@@ -134,9 +134,11 @@ Guía completa: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
 
 ## Configuración
 
-Copia `.env.example` a `.env` y ajusta los valores necesarios.
+Copia `.env.example` a `.env.develop` y ajusta los valores necesarios para desarrollo. El Compose local carga ese fichero dentro del contenedor.
 
 Para una integración con Legio, configura como mínimo `MCP_CLIENT_ID`, `MCP_API_KEY`, `ADMIN_API_KEY` y los datos de contacto del proveedor. En producción usa secretos externos y no subas `.env.production` al repositorio.
+
+El stack local y el de despliegue publican la API en el puerto `5100` de forma predeterminada. `develop` se ejecuta localmente; `staged` y `master` se ejecutan en sus servidores Hetzner. Si necesitas ejecutar ambos stacks en el mismo equipo, asigna `SUPPLIER_HOST_PORT=5101` en `.env.develop` y usa `http://localhost:5101` (o `ngrok http 5101`) para desarrollo.
 
 ### Variables de entorno clave
 

@@ -69,9 +69,9 @@ crean y mantienen exclusivamente en sus servidores Hetzner; no deben confirmarse
 
 ### 4.2 Variables de entorno clave
 
-Copiar `.env.example` como `.env` y ajustar los valores:
+Copiar `.env.example` como `.env.develop` y ajustar los valores:
 
-cp .env.example .env
+cp .env.example .env.develop
 
 
 | Variable                     | Entorno          |Descripción                                   |
@@ -152,7 +152,9 @@ Usa la URL HTTPS generada por ngrok seguida de `/mcp` para las pruebas de integr
 
 
 ### 5.3 Opción B: Docker Compose con SQLite (recomendado para desarrollo)
-docker compose -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
+docker compose --env-file .env.develop -f docker-compose.yml -f docker-compose.sqlite.yml up --build -d
+
+El Compose local inyecta `.env.develop` en el contenedor. Si el Compose de despliegue ocupa `5100` en el mismo host, configura `SUPPLIER_HOST_PORT=5101` en `.env.develop`; la API local quedará en `http://localhost:5101`.
 
 #### Verificar que el contenedor está corriendo
 docker compose ps
@@ -175,14 +177,14 @@ también `ASPNETCORE_ENVIRONMENT=Production`; la cadena
 `ConnectionStrings__Catalog` se construye a partir de las variables del fichero
 `.env`.
 
-#### Configurar credenciales en .env
-Configurar credenciales en .env:
+#### Configurar credenciales en .env.develop
+Configurar credenciales en `.env.develop`:
 - POSTGRES_DB=supplier_catalog
 - POSTGRES_USER=supplier_user
 - POSTGRES_PASSWORD=change_me
 
 #### Construir y levantar servicios
-- docker compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
+- docker compose --env-file .env.develop -f docker-compose.yml -f docker-compose.override.yml up --build -d
 
 Las migraciones EF Core se aplican al arrancar la API mediante
 `Database.MigrateAsync()`. Para despliegues con migraciones gestionadas fuera de
@@ -203,16 +205,19 @@ Copy-Item .env.example .env.production
 notepad .env.production
 $env:IMAGE_TAG = 'sha-<commit>'
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
+$env:COMPOSE_ENV_FILE = '.env.production'
 docker compose --env-file .env.production -f docker-compose.production.yml config
 docker compose --env-file .env.production -f docker-compose.production.yml up -d
 ```
 
-Para Staging, usa `.env.staged` y establece `ASPNETCORE_ENVIRONMENT` en `Staging`.
+Para Staging, usa `.env.staged`, establece `ASPNETCORE_ENVIRONMENT` en `Staging` y `$env:COMPOSE_ENV_FILE = '.env.staged'`.
 `IMAGE_TAG` debe ser la etiqueta inmutable `sha-<commit>` publicada por el run de
 GitHub Actions que se desea desplegar. En ambos ficheros se deben sustituir, como
 mínimo, `POSTGRES_PASSWORD`, `ADMIN_API_KEY`, `MCP_CLIENT_ID`, `MCP_API_KEY` y los
 datos reales del proveedor. Los ficheros permanecen fuera de Git. El comando
 `config` valida la interpolación sin iniciar contenedores.
+
+Si un secreto contiene `$`, escríbelo entre comillas simples en el fichero `.env` correspondiente para conservarlo literalmente; por ejemplo, `POSTGRES_PASSWORD='valor$con$dolares'`.
 
 #### Verificar salud del servicio
 - `docker compose --env-file .env.production -f docker-compose.production.yml ps`
