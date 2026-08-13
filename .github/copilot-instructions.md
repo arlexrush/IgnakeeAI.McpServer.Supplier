@@ -7,3 +7,4 @@
 ## Project-Specific Rules
 - El repositorio usa tres ramas y entornos asociados: `develop` para desarrollo, `staged` para preproducción y `master` para producción; el flujo de CI/CD debe respetar esta promoción.
 - Los entornos `staged` y `master`/producción se desplegarán en servidores de Hetzner; `develop` se expone localmente mediante ngrok.
+- La descripción del commit/workflow «feature/Prepare for CI CD» corresponde a una pull request desde `develop` hacia `staged`, y no debe interpretarse como una rama feature.
