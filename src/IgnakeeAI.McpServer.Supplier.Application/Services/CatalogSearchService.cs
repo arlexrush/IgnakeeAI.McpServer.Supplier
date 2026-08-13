@@ -3,6 +3,7 @@ using IgnakeeAI.McpServer.Supplier.Application.Models;
 using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 using IgnakeeAI.McpServer.Supplier.Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace IgnakeeAI.McpServer.Supplier.Application.Services
 {
@@ -16,13 +17,16 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
         private readonly ICatalogRepository _catalog;
         private readonly ISupplierConfig _supplierConfig;
         private readonly IEcommerceInventoryClient? _ecommerce;
+        private readonly ILogger<CatalogSearchService>? _logger;
 
         public CatalogSearchService(ICatalogRepository catalog, ISupplierConfig supplierConfig,
-            IEcommerceInventoryClient? ecommerce = null)
+            IEcommerceInventoryClient? ecommerce = null,
+            ILogger<CatalogSearchService>? logger = null)
         {
             _catalog = catalog;
             _supplierConfig = supplierConfig;
             _ecommerce = ecommerce;
+            _logger = logger;
         }
 
         /// <summary>Busca un producto por código o descripción y devuelve el resultado de precio.</summary>
@@ -137,7 +141,10 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Services
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    // Fallo técnico del ecommerce: caer en catálogo local sin romper el tool
+                    var failureKind = (ex as IEcommerceFailure)?.FailureKind ?? EcommerceFailureKind.Unknown;
+                    _logger?.LogWarning(ex,
+                        "Fallback al catálogo local para disponibilidad de {ItemCode} tras fallo de ecommerce {FailureKind}.",
+                        itemCode, failureKind);
                 }
             }
 

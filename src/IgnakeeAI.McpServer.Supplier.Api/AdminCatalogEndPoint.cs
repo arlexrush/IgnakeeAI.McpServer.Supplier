@@ -248,6 +248,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                 var startedAt = DateTimeOffset.UtcNow;
                 var pageSize = config.GetValue<int>("EcommerceInventory:SyncPageSize", 50);
                 if (pageSize <= 0) pageSize = 50;
+                pageSize = Math.Min(pageSize, 50);
 
                 var totalImported = 0;
                 var totalUpserted = 0;
@@ -258,10 +259,9 @@ namespace IgnakeeAI.McpServer.Supplier.Api
                     var page = 1;
                     while (true)
                     {
-                        var products = await ecommerce.GetCatalogPageAsync(page, pageSize, cancellationToken);
-                        if (products.Count == 0) break;
+                        var catalogPage = await ecommerce.GetCatalogPageAsync(page, pageSize, cancellationToken);
 
-                        foreach (var product in products)
+                        foreach (var product in catalogPage.Products)
                         {
                             totalImported++;
                             try
@@ -295,7 +295,7 @@ namespace IgnakeeAI.McpServer.Supplier.Api
 
                         await db.SaveChangesAsync(cancellationToken);
 
-                        if (products.Count < pageSize) break;
+                        if (catalogPage.PageIndex >= catalogPage.PageCount) break;
                         page++;
                     }
 

@@ -52,7 +52,7 @@ Este runbook normaliza el flujo real:
 | `GET /api/v1/inventory?pageIndex={n}&pageSize={n}` | sincronización inicial y posteriores `/admin/sync/ecommerce` | usar `pageSize <= 50` |
 | encabezado `Authorization` con el JWT del usuario técnico | `EcommerceInventory__BearerToken` | no usar API key para esta llamada |
 | roles `ADMIN` o `INVENTORY_READER` en `InventoryController` | identidad técnica del Supplier | `SUPPLIER_INTEGRATION` por sí solo no sirve para este controlador |
-| `PaginationVm<T>` con `data`, `count`, `pageIndex`, `pageSize`, `pageCount`, `resultByPage` | bucle de sincronización paginado del Supplier | cambiar estas claves rompe el import |
+| `PaginationVm<T>` con `data`, `count`, `pageIndex`, `pageSize`, `pageCount`, `resultByPage` | bucle de sincronización paginado del Supplier | Supplier continúa mientras `pageIndex < pageCount`; cambiar estas claves rompe el import |
 
 ## 4. Acciones obligatorias del lado Ecommerce
 
@@ -232,12 +232,12 @@ Respuesta esperada:
 
 ### Importante sobre paginación
 
-El Ecommerce recorta `pageSize` a un máximo de `50`. El Supplier termina el bucle cuando la página devuelta trae menos elementos que el `pageSize` solicitado. Por eso:
+El Ecommerce recorta `pageSize` a un máximo de `50`. El Supplier también limita el tamaño efectivo solicitado a `50` y termina el bucle usando `pageIndex` y `pageCount` del envelope, no la cantidad de elementos recibidos. Por eso:
 
 - **usa `EcommerceInventory__SyncPageSize=50`**
 - no subas ese valor a `100`
 
-Si lo subes, el Ecommerce devolverá 50 elementos y el Supplier interpretará erróneamente que ya llegó a la última página.
+Los valores superiores se recortan a `50`; `pageIndex` y `pageCount` preservan la detección correcta de la última página.
 
 ## 8. Comportamiento en tiempo real y fallback
 
@@ -245,12 +245,13 @@ Si lo subes, el Ecommerce devolverá 50 elementos y el Supplier interpretará er
 
 1. si `EcommerceInventory` está habilitado y `BaseUrl` existe, intenta `GET /api/v1/inventory/{productCode}`;
 2. si Ecommerce responde con producto válido, devuelve stock y lead time en tiempo real;
-3. si Ecommerce falla, responde 404, devuelve null o hay timeout/error de red, el Supplier **cae al catálogo local**;
+3. si Ecommerce falla, responde 404 o devuelve null, el Supplier **cae al catálogo local**; los fallos de red/transitorios, autenticación y mapping/contrato se registran como advertencias con `FailureKind` antes del fallback;
 4. si no existe ni en Ecommerce ni en catálogo local, responde `found: false`.
 
 Implicaciones:
 
 - `CheckAvailability` puede seguir funcionando aunque Ecommerce esté caído, si el producto ya fue sincronizado;
+- para diagnosticar un fallback, filtra los logs por el mensaje `Fallback al catálogo local` y revisa `FailureKind` (`Transient`, `Authentication` o `Mapping`) junto con la excepción registrada;
 - `GetPrice` y `SearchAlternatives` siguen usando el catálogo local.
 
 ## 9. Day 1 validation script
