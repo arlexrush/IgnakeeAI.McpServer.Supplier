@@ -1,3 +1,4 @@
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 
 namespace IgnakeeAI.McpServer.Supplier.Application.Interfaces
@@ -20,8 +21,8 @@ namespace IgnakeeAI.McpServer.Supplier.Application.Interfaces
 
         /// <summary>
         /// Obtiene una página del catálogo activo del ecommerce para sincronización.
-        /// Devuelve lista vacía si la página está fuera de rango.
+        /// Incluye los productos y la metadata de paginación devuelta por el ecommerce.
         /// </summary>
-        Task<IReadOnlyList<CatalogProduct>> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default);
+        Task<EcommerceCatalogPage> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default);
     }
 }

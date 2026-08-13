@@ -1,3 +1,4 @@
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using IgnakeeAI.McpServer.Supplier.Application.Services;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
@@ -5,6 +6,7 @@ using IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce.Dtos;
 using IgnakeeAI.McpServer.Supplier.Tests.Fakes;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -19,6 +21,13 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
     public class EcommerceInventoryConnectorTests : IDisposable
     {
         private readonly CancellationTokenSource _cts = new();
+
+        public static IEnumerable<object[]> EcommerceFallbackFailures =>
+        [
+            [new EcommerceCommunicationException("Network failure"), EcommerceFailureKind.Transient],
+            [new EcommerceAuthException("Authentication failure"), EcommerceFailureKind.Authentication],
+            [new EcommerceMappingException("Mapping failure"), EcommerceFailureKind.Mapping]
+        ];
 
         public void Dispose()
         {
@@ -259,10 +268,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(pageIndex, 3, totalCount: 3)));
             var connector = CreateConnector(handler);
 
-            var products = await connector.GetCatalogPageAsync(1, 3, _cts.Token);
+            var catalogPage = await connector.GetCatalogPageAsync(1, 3, _cts.Token);
 
-            Assert.Equal(3, products.Count);
-            Assert.All(products, p =>
+            Assert.Equal(3, catalogPage.Products.Count);
+            Assert.All(catalogPage.Products, p =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(p.ItemCode));
                 Assert.True(p.IsActive);
@@ -276,9 +285,9 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageEmpty()));
             var connector = CreateConnector(handler);
 
-            var products = await connector.GetCatalogPageAsync(99, 100, _cts.Token);
+            var catalogPage = await connector.GetCatalogPageAsync(99, 100, _cts.Token);
 
-            Assert.Empty(products);
+            Assert.Empty(catalogPage.Products);
         }
 
         [Fact]
@@ -288,11 +297,11 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageWithEmptyCode()));
             var connector = CreateConnector(handler);
 
-            var products = await connector.GetCatalogPageAsync(1, 100, _cts.Token);
+            var catalogPage = await connector.GetCatalogPageAsync(1, 100, _cts.Token);
 
             // Solo el producto con código válido debe incluirse
-            Assert.Single(products);
-            Assert.Equal("ECO-VALID-001", products[0].ItemCode);
+            Assert.Single(catalogPage.Products);
+            Assert.Equal("ECO-VALID-001", catalogPage.Products[0].ItemCode);
         }
 
         // ── GetCatalogPageAsync: pagination ───────────────────────────────────────
@@ -500,10 +509,12 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(1, 5)));
             var connector = CreateConnector(handler);
 
-            var products = await connector.GetCatalogPageAsync(1, 5, _cts.Token);
+            var catalogPage = await connector.GetCatalogPageAsync(1, 5, _cts.Token);
 
             // If "items" assumption remained, this would return 0 products
-            Assert.Equal(5, products.Count);
+            Assert.Equal(5, catalogPage.Products.Count);
+            Assert.Equal(1, catalogPage.PageIndex);
+            Assert.Equal(30, catalogPage.PageCount);
         }
 
         [Fact]
@@ -514,10 +525,10 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
                 (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageWithUnavailableProduct()));
             var connector = CreateConnector(handler);
 
-            var products = await connector.GetCatalogPageAsync(1, 10, _cts.Token);
+            var catalogPage = await connector.GetCatalogPageAsync(1, 10, _cts.Token);
 
-            Assert.Single(products);
-            Assert.False(products[0].IsActive);
+            Assert.Single(catalogPage.Products);
+            Assert.False(catalogPage.Products[0].IsActive);
         }
 
         [Fact]
@@ -582,6 +593,24 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             Assert.Equal(42, result.AvailableStock);
         }
 
+        [Theory]
+        [MemberData(nameof(EcommerceFallbackFailures))]
+        public async Task CheckAvailabilityAsync_EcommerceFailure_LogsFallbackReason(
+            Exception ecommerceFailure, EcommerceFailureKind expectedFailureKind)
+        {
+            var logger = new RecordingLogger<CatalogSearchService>();
+            var localRepo = new StubCatalogRepo("ECO-001", stock: 42);
+            var ecommerceClient = new StubEcommerceClient(enabled: true, exception: ecommerceFailure);
+            var service = new CatalogSearchService(localRepo, new TestSupplierConfig(), ecommerceClient, logger);
+
+            await service.CheckAvailabilityAsync("ECO-001", _cts.Token);
+
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Same(ecommerceFailure, entry.Exception);
+            Assert.Contains(expectedFailureKind.ToString(), entry.Message);
+        }
+
         [Fact]
         public async Task CheckAvailabilityAsync_EcommerceDisabled_UsesLocalCatalog()
         {
@@ -619,10 +648,8 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         /// <summary>
         /// Regression guard: EcommerceInventoryOptions.SyncPageSize debe ser 50,
         /// alineado con el límite MaxPagesSize=50 de PaginationBaseQuery en el ecommerce.
-        /// Un valor mayor (e.g. 100) hace que el bucle de sincronización en
-        /// AdminCatalogEndPoint termine prematuramente porque el ecommerce recorta la
-        /// respuesta a 50 ítems; el comparador products.Count &lt; pageSize se cumple
-        /// en la primera página aunque existan más páginas → truncación silenciosa.
+        /// Los valores mayores se recortan a 50 en AdminCatalogEndPoint para respetar
+        /// el límite del ecommerce.
         /// Fuente: src/Core/Ecommerce.Application/…/Features/Shared/Queries/PaginationBaseQuery.cs
         ///          private const int MaxPagesSize = 50;
         /// </summary>
@@ -634,13 +661,8 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         }
 
         /// <summary>
-        /// Prueba que el bucle de sincronización (lógica: continúa mientras
-        /// products.Count == pageSize) termina correctamente cuando se usa
-        /// pageSize=50 (el máximo del ecommerce). Simula un catálogo de 125
-        /// productos distribuidos en 3 páginas (50 + 50 + 25).
-        ///
-        /// Regression: si pageSize fuera 100, el ecommerce retornaría 50 en la primera
-        /// página y 50 &lt; 100 haría break, perdiendo las páginas 2 y 3 (75 productos).
+        /// Verifica que cada envelope mantiene la metadata necesaria para que el
+        /// endpoint de sincronización continúe hasta pageIndex == pageCount.
         /// </summary>
         [Fact]
         public async Task GetCatalogPageAsync_MultiPage_AllPagesReadableWithCorrectPageSize()
@@ -652,7 +674,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             {
                 if (pageIndex == 1) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(1, pageSize, totalCount: 125));
                 if (pageIndex == 2) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(2, pageSize, totalCount: 125));
-                if (pageIndex == 3) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(3, 25, totalCount: 125));
+                if (pageIndex == 3) return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPage(3, 25, totalCount: 125, reportedPageSize: pageSize));
                 return (HttpStatusCode.OK, EcommerceFakeResponses.CatalogPageEmpty());
             });
             var connector = CreateConnector(handler);
@@ -661,38 +683,25 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             var p2 = await connector.GetCatalogPageAsync(2, pageSize, _cts.Token);
             var p3 = await connector.GetCatalogPageAsync(3, pageSize, _cts.Token);
 
-            Assert.Equal(50, p1.Count);
-            Assert.Equal(50, p2.Count);
-            Assert.Equal(25, p3.Count);
+            Assert.Equal(50, p1.Products.Count);
+            Assert.Equal(50, p2.Products.Count);
+            Assert.Equal(25, p3.Products.Count);
 
-            // Simulate sync-loop termination logic: break when p3.Count < pageSize
-            // (this is what AdminCatalogEndPoint does)
-            Assert.True(p1.Count == pageSize); // continue
-            Assert.True(p2.Count == pageSize); // continue
-            Assert.True(p3.Count < pageSize);  // break — all products read
+            Assert.True(p1.PageIndex < p1.PageCount);
+            Assert.True(p2.PageIndex < p2.PageCount);
+            Assert.True(p3.PageIndex >= p3.PageCount);
         }
 
         /// <summary>
-        /// Regression guard: demuestra que si se enviara pageSize=100 y el ecommerce
-        /// retorna solo 50 (su máximo), la condición products.Count &lt; pageSize
-        /// se cumpliría en la primera página (50 &lt; 100 = true), rompiendo el bucle
-        /// prematuramente y perdiendo las páginas siguientes.
-        /// Con pageSize=50 (el valor corregido), la condición 50 &lt; 50 = false NO se
-        /// cumple en una página llena, por lo que el bucle continúa correctamente.
+        /// La decisión de continuar debe basarse en la metadata del envelope, incluso
+        /// si el ecommerce devuelve menos productos que el tamaño solicitado.
         /// </summary>
         [Fact]
-        public void SyncLoopTermination_PageSizeOver50_WouldTruncateCatalog()
+        public void SyncLoopTermination_UsesPageMetadataInsteadOfProductCount()
         {
-            // Ecommerce silently caps response to MaxPagesSize=50.
-            // With pageSize > 50, the loop breaks after first page.
-            const int requestedPageSize = 100;
-            const int actualItemsReturned = 50; // ecommerce capped at 50
+            var catalogPage = new EcommerceCatalogPage([], PageIndex: 1, PageCount: 3);
 
-            // Old (stale) assumption: 50 < 100 → loop would break → silent truncation
-            bool wouldTruncate = actualItemsReturned < requestedPageSize;
-            Assert.True(wouldTruncate,
-                "pageSize=100 causes premature termination: ecommerce returns max 50, " +
-                "50 < 100 triggers loop break after first page, losing remaining pages.");
+            Assert.True(catalogPage.PageIndex < catalogPage.PageCount);
         }
     }
 
@@ -736,20 +745,25 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
         private readonly string? _productCode;
         private readonly int _stock;
         private readonly bool _throwException;
+        private readonly Exception? _exception;
 
         public bool IsEnabled { get; }
 
         public StubEcommerceClient(bool enabled = true, string? productCode = "ECO-001",
-            int stock = 0, bool throwException = false)
+            int stock = 0, bool throwException = false, Exception? exception = null)
         {
             IsEnabled = enabled;
             _productCode = productCode;
             _stock = stock;
             _throwException = throwException;
+            _exception = exception;
         }
 
         public Task<CatalogProduct?> GetProductByCodeAsync(string productCode, CancellationToken ct = default)
         {
+            if (_exception is not null)
+                throw _exception;
+
             if (_throwException)
                 throw new EcommerceCommunicationException("Test exception");
 
@@ -763,8 +777,32 @@ namespace IgnakeeAI.McpServer.Supplier.Tests
             });
         }
 
-        public Task<IReadOnlyList<CatalogProduct>> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CatalogProduct>>([]);
+        public Task<EcommerceCatalogPage> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default)
+            => Task.FromResult(new EcommerceCatalogPage([], page, 0));
+    }
+
+    internal sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add((logLevel, formatter(state, exception), exception));
+        }
+
+        private sealed class NoopScope : IDisposable
+        {
+            public static NoopScope Instance { get; } = new();
+
+            public void Dispose()
+            {
+            }
+        }
     }
 
 }

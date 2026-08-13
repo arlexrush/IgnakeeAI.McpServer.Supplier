@@ -76,7 +76,7 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
         // ── Catálogo paginado (PaginationVm) ─────────────────────────────────────
 
         /// <summary>Página de catálogo con N productos activos usando contrato PaginationVm del ecommerce.</summary>
-        public static string CatalogPage(int pageIndex, int pageSize, int totalCount = 150) =>
+        public static string CatalogPage(int pageIndex, int pageSize, int totalCount = 150, int? reportedPageSize = null) =>
             JsonSerializer.Serialize(new
             {
                 data = Enumerable.Range(1, pageSize).Select(i => new
@@ -97,8 +97,8 @@ namespace IgnakeeAI.McpServer.Supplier.Tests.Fakes
                 }).ToArray(),
                 count = totalCount,
                 pageIndex,
-                pageSize,
-                pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                pageSize = reportedPageSize ?? pageSize,
+                pageCount = (int)Math.Ceiling((double)totalCount / (reportedPageSize ?? pageSize)),
                 resultByPage = pageSize
             });
 
