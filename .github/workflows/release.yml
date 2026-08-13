@@ -127,12 +127,14 @@ jobs:
             "cd '${DEPLOY_PATH}' && \
              IMAGE_TAG='${IMAGE_TAG}' \
              ASPNETCORE_ENVIRONMENT='${ASPNETCORE_ENVIRONMENT}' \
+              COMPOSE_ENV_FILE='${ENVIRONMENT_FILE}' \
              docker compose \
                --env-file '${ENVIRONMENT_FILE}' \
                -f docker-compose.production.yml \
                pull && \
              IMAGE_TAG='${IMAGE_TAG}' \
              ASPNETCORE_ENVIRONMENT='${ASPNETCORE_ENVIRONMENT}' \
+              COMPOSE_ENV_FILE='${ENVIRONMENT_FILE}' \
              docker compose \
                --env-file '${ENVIRONMENT_FILE}' \
                -f docker-compose.production.yml \

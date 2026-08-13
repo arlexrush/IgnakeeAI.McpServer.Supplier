@@ -148,6 +148,13 @@ namespace IgnakeeAI.McpServer.Supplier.Api
 
             var app = builder.Build();
 
+            if (builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true))
+            {
+                await using var scope = app.Services.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<SupplierCatalogDbContext>();
+                await db.Database.MigrateAsync();
+            }
+
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler(exceptionApp =>
