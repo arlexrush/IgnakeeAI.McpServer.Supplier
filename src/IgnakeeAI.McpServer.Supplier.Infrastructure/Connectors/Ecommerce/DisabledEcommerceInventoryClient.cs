@@ -1,3 +1,4 @@
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 
@@ -15,7 +16,7 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
         public Task<CatalogProduct?> GetProductByCodeAsync(string productCode, CancellationToken ct = default)
             => Task.FromResult<CatalogProduct?>(null);
 
-        public Task<IReadOnlyList<CatalogProduct>> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CatalogProduct>>([]);
+        public Task<EcommerceCatalogPage> GetCatalogPageAsync(int page, int pageSize, CancellationToken ct = default)
+            => Task.FromResult(new EcommerceCatalogPage([], page, 0));
     }
 }

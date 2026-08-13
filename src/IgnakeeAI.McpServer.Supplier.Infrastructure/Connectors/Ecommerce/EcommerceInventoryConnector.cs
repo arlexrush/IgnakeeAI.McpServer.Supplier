@@ -1,3 +1,4 @@
+using IgnakeeAI.McpServer.Supplier.Application.Contracts;
 using IgnakeeAI.McpServer.Supplier.Application.Interfaces;
 using IgnakeeAI.McpServer.Supplier.Domain.Entities;
 using IgnakeeAI.McpServer.Supplier.Infrastructure.Configuration;
@@ -129,11 +130,11 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
         }
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<CatalogProduct>> GetCatalogPageAsync(
+        public async Task<EcommerceCatalogPage> GetCatalogPageAsync(
             int pageIndex, int pageSize, CancellationToken ct = default)
         {
             if (!IsEnabled)
-                return [];
+                return new EcommerceCatalogPage([], pageIndex, 0);
 
             var basePath = _options.CatalogSyncPath.TrimEnd('/');
             var separator = basePath.Contains('?') ? "&" : "?";
@@ -161,7 +162,7 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
             }
 
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return [];
+                return new EcommerceCatalogPage([], pageIndex, 0);
 
             if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
@@ -186,11 +187,12 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
                     $"Respuesta JSON malformada al leer la página {pageIndex} del catálogo ecommerce.", ex);
             }
 
-            if (pageDto?.Data is null or { Count: 0 })
-                return [];
+            if (pageDto is null)
+                return new EcommerceCatalogPage([], pageIndex, 0);
 
-            var products = new List<CatalogProduct>(pageDto.Data.Count);
-            foreach (var dto in pageDto.Data)
+            var productDtos = pageDto.Data ?? [];
+            var products = new List<CatalogProduct>(productDtos.Count);
+            foreach (var dto in productDtos)
             {
                 if (string.IsNullOrWhiteSpace(dto.ProductCode))
                 {
@@ -201,7 +203,7 @@ namespace IgnakeeAI.McpServer.Supplier.Infrastructure.Connectors.Ecommerce
                 products.Add(MapToProduct(dto));
             }
 
-            return products;
+            return new EcommerceCatalogPage(products, pageDto.PageIndex, pageDto.PageCount);
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────
